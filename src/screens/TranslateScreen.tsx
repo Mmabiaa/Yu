@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { speak } from '../utils/speech';
+import * as Clipboard from 'expo-clipboard';
 import { colors, typography } from '../theme';
 
 const languages = [
@@ -42,12 +45,71 @@ export default function TranslateScreen({ navigation }: any) {
   const [outputText, setOutputText] = useState('');
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const fromButtonRef = useRef<View | null>(null);
+  const toButtonRef = useRef<View | null>(null);
+  const [fromButtonLayout, setFromButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [toButtonLayout, setToButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleTranslate = () => {
     // Mock translation
     if (inputText.trim()) {
       const translation = mockTranslations[inputText] || `[${inputText} translated to ${toLang.name}]`;
       setOutputText(translation);
+    }
+  };
+
+  const handleRecordAudio = () => {
+    if (isRecording) {
+      // Stop recording and translate
+      setIsRecording(false);
+      // Mock: simulate recording "Hello"
+      setInputText('Hello');
+      handleTranslate();
+    } else {
+      // Start recording
+      setIsRecording(true);
+      // Mock recording - stop after 2 seconds
+      setTimeout(() => {
+        setIsRecording(false);
+        setInputText('Hello');
+        handleTranslate();
+      }, 2000);
+    }
+  };
+
+  const handleSpeakOutput = () => {
+    if (outputText) {
+      const langMap: { [key: string]: string } = {
+        'es': 'es',
+        'fr': 'fr',
+        'de': 'de',
+        'en': 'en',
+      };
+      speak(outputText, {
+        language: langMap[toLang.code] || 'en',
+        pitch: 1.0,
+        rate: 0.9,
+      });
+    }
+  };
+
+  const handleCopy = async () => {
+    if (outputText) {
+      await Clipboard.setStringAsync(outputText);
+      Alert.alert('Copied', 'Text copied to clipboard');
+      // Also speak the text as requested
+      const langMap: { [key: string]: string } = {
+        'es': 'es',
+        'fr': 'fr',
+        'de': 'de',
+        'en': 'en',
+      };
+      speak(outputText, {
+        language: langMap[toLang.code] || 'en',
+        pitch: 1.0,
+        rate: 0.9,
+      });
     }
   };
 
@@ -85,31 +147,47 @@ export default function TranslateScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.languageSelector}>
-          <TouchableOpacity 
-            style={[styles.languageButton, fromLang.code === 'en' && styles.languageButtonSelected]}
-            onPress={() => setShowFromDropdown(true)}
-          >
-            <Text style={styles.flag}>{fromLang.flag}</Text>
-            <Text style={styles.languageText}>{fromLang.name}</Text>
-            {fromLang.code === 'en' && (
-              <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.languageButtonWrapper} ref={fromButtonRef}>
+            <TouchableOpacity 
+              style={[styles.languageButton, fromLang.code === 'en' && styles.languageButtonSelected]}
+              onPress={() => {
+                fromButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                  setFromButtonLayout({ x: pageX, y: pageY + height, width, height });
+                  setShowFromDropdown(true);
+                  setShowToDropdown(false);
+                });
+              }}
+            >
+              <Text style={styles.flag}>{fromLang.flag}</Text>
+              <Text style={styles.languageText}>{fromLang.name}</Text>
+              {fromLang.code === 'en' && (
+                <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
+              )}
+            </TouchableOpacity>
+          </View>
           
           <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
             <Ionicons name="swap-vertical" size={24} color={colors.text} />
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.languageButton, toLang.code === 'es' && styles.languageButtonSelected]}
-            onPress={() => setShowToDropdown(true)}
-          >
-            <Text style={styles.flag}>{toLang.flag}</Text>
-            <Text style={styles.languageText}>{toLang.name}</Text>
-            {toLang.code === 'es' && (
-              <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.languageButtonWrapper} ref={toButtonRef}>
+            <TouchableOpacity 
+              style={[styles.languageButton, toLang.code === 'es' && styles.languageButtonSelected]}
+              onPress={() => {
+                toButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                  setToButtonLayout({ x: pageX, y: pageY + height, width, height });
+                  setShowToDropdown(true);
+                  setShowFromDropdown(false);
+                });
+              }}
+            >
+              <Text style={styles.flag}>{toLang.flag}</Text>
+              <Text style={styles.languageText}>{toLang.name}</Text>
+              {toLang.code === 'es' && (
+                <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.inputSection}>
@@ -127,8 +205,15 @@ export default function TranslateScreen({ navigation }: any) {
               multiline
             />
             <View style={styles.inputIcons}>
-              <TouchableOpacity style={styles.micButton}>
-                <Ionicons name="mic-outline" size={20} color={colors.textSecondary} />
+              <TouchableOpacity 
+                style={[styles.micButton, isRecording && styles.micButtonRecording]}
+                onPress={handleRecordAudio}
+              >
+                <Ionicons 
+                  name={isRecording ? "mic" : "mic-outline"} 
+                  size={20} 
+                  color={isRecording ? colors.red : colors.textSecondary} 
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -147,10 +232,10 @@ export default function TranslateScreen({ navigation }: any) {
             <View style={styles.outputContainer}>
               <Text style={styles.outputText}>{outputText}</Text>
               <View style={styles.outputIcons}>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity style={styles.iconButton} onPress={handleSpeakOutput}>
                   <Ionicons name="volume-high-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity style={styles.iconButton} onPress={handleCopy}>
                   <Ionicons name="copy-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
@@ -174,7 +259,7 @@ export default function TranslateScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
-      {/* From Language Dropdown */}
+      {/* From Language Dropdown Modal */}
       <Modal
         visible={showFromDropdown}
         transparent
@@ -186,7 +271,12 @@ export default function TranslateScreen({ navigation }: any) {
           activeOpacity={1}
           onPress={() => setShowFromDropdown(false)}
         >
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, {
+            position: 'absolute',
+            top: fromButtonLayout.y,
+            left: fromButtonLayout.x,
+            width: fromButtonLayout.width || 150,
+          }]}>
             {languages.map((lang) => (
               <TouchableOpacity
                 key={lang.code}
@@ -210,7 +300,7 @@ export default function TranslateScreen({ navigation }: any) {
         </TouchableOpacity>
       </Modal>
 
-      {/* To Language Dropdown */}
+      {/* To Language Dropdown Modal */}
       <Modal
         visible={showToDropdown}
         transparent
@@ -222,7 +312,12 @@ export default function TranslateScreen({ navigation }: any) {
           activeOpacity={1}
           onPress={() => setShowToDropdown(false)}
         >
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, {
+            position: 'absolute',
+            top: toButtonLayout.y,
+            left: toButtonLayout.x,
+            width: toButtonLayout.width || 150,
+          }]}>
             {languages.map((lang) => (
               <TouchableOpacity
                 key={lang.code}
@@ -283,6 +378,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
     gap: 12,
+  },
+  languageButtonWrapper: {
+    flex: 1,
   },
   languageButton: {
     flex: 1,
@@ -421,6 +519,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
     minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  micButtonRecording: {
+    backgroundColor: colors.red + '20',
+    borderRadius: 20,
   },
   dropdownItem: {
     flexDirection: 'row',

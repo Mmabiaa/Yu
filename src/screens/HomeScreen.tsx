@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { speak } from '../utils/speech';
 import YuOrb from '../components/YuOrb';
 import AudioVisualization from '../components/AudioVisualization';
 import { colors, typography } from '../theme';
@@ -56,6 +57,13 @@ export default function HomeScreen({ navigation }: any) {
         const userInput = 'hello'; // In real app, this would be from speech recognition
         const mockResponse = mockResponses[userInput.toLowerCase()] || mockResponses['default'];
         setResponse(mockResponse);
+        
+        // Speak the response
+        speak(mockResponse, {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.9,
+        });
       }, 3000);
 
       return () => clearTimeout(timer);
@@ -113,9 +121,6 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all &gt;</Text>
-            </TouchableOpacity>
           </View>
           
           <ScrollView 
@@ -134,6 +139,8 @@ export default function HomeScreen({ navigation }: any) {
                     handleOrbTap();
                   } else if (action.id === 'translate') {
                     navigation.navigate('Translate');
+                  } else if (action.id === 'control') {
+                    navigation.navigate('Chat');
                   }
                 }}
               >

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import { speak } from '../utils/speech';
 import { colors, typography } from '../theme';
 
 const { width, height } = Dimensions.get('window');
@@ -119,7 +120,13 @@ export default function YuVisionScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.captureButtonInner}
             onPress={() => {
-              // Handle capture/analysis
+              // Mock analysis speech
+              const mockAnalysis = "I can see various objects in the frame. This appears to be a typical indoor environment with furniture and lighting. In the actual implementation, I would provide detailed object recognition and scene analysis.";
+              speak(mockAnalysis, {
+                language: 'en',
+                pitch: 1.0,
+                rate: 0.85,
+              });
             }}
           >
             <Ionicons name="flash" size={32} color={colors.text} />

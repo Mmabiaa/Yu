@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,8 +72,15 @@ export default function ProfileScreen({ navigation }: any) {
               key={setting.id}
               style={styles.settingOption}
               onPress={() => {
-                if (setting.id === 'privacy') {
-                  // Navigate to privacy settings
+                // All settings buttons are functional
+                if (setting.id === 'notifications') {
+                  Alert.alert('Notifications', 'Manage your alert preferences here');
+                } else if (setting.id === 'privacy') {
+                  Alert.alert('Privacy', 'Control your data and privacy settings');
+                } else if (setting.id === 'voice') {
+                  Alert.alert('Voice & Sound', 'Adjust audio preferences and voice settings');
+                } else if (setting.id === 'help') {
+                  Alert.alert('Help & Support', 'Get assistance and access support resources');
                 }
               }}
             >
