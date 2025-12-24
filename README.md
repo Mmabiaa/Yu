@@ -112,13 +112,15 @@ Yu/
 ### Home Screen
 
 The Home Screen is your main interaction hub.
-
+<br>
+![](./screenshots/home1.jpeg) <br>
 #### Features:
 - **Yu Orb**: Tap to start listening, long press for profile
 - **Quick Actions**: Access Yu-Vision, Yu-Voice, Yu-Translate, Yu-Control
 - **Listening Mode**: Tap the orb to activate voice input
 - **Responses**: Yu responds with voice and text
 
+![](./screenshots/home3.jpeg)
 #### How to Use:
 1. Tap the Yu Orb to start listening
 2. Wait for the 3-second listening period
@@ -127,7 +129,8 @@ The Home Screen is your main interaction hub.
 
 ### Profile Screen
 
-Customize your Yu experience.
+Customize your Yu experience. <br>
+![](./screenshots/profile1.jpeg)
 
 #### Features:
 - **Name Setup**: Set your name for personalization
@@ -142,7 +145,7 @@ Customize your Yu experience.
   - Shadow Yu: Passive learning
   - Off: Complete privacy
 - **Settings**: Access notifications, privacy, voice, and help
-
+![](./screenshots/profile2.jpeg)
 #### How to Use:
 1. Long press the Yu Orb from Home Screen
 2. Set your name in the input field
@@ -152,7 +155,8 @@ Customize your Yu experience.
 
 ### Chat Screen
 
-Have conversations with Yu.
+Have conversations with Yu. <br>
+![](./screenshots/chat.jpeg)
 
 #### Features:
 - **Text Messaging**: Type messages to Yu
@@ -172,21 +176,23 @@ Have conversations with Yu.
 ### Translate Screen
 
 Translate text and speech between languages.
-
+<br>
+![](./screenshots/translate1.jpeg)
 #### Features:
 - **Language Selection**: Choose source and target languages
 - **Text Translation**: Type or paste text to translate
 - **Voice Translation**: Record audio for speech-to-text translation
 - **Voice Playback**: Hear translated text
 - **Copy to Clipboard**: Copy translated text
-- **Quick Phrases**: One-tap common phrase translation
-
+- **Quick Phrases**: One-tap common phrase translation <br><br>
+![](./screenshots/translate2.jpeg) <br>
 #### Supported Languages:
 - English 🇺🇸
 - Spanish 🇪🇸
 - French 🇫🇷
 - German 🇩🇪
-
+<br> <br>
+![](./screenshots/translate3.jpeg)
 #### How to Use:
 1. Navigate from Home Screen → Yu-Translate
 2. Select source and target languages
@@ -199,7 +205,7 @@ Translate text and speech between languages.
 ### Yu-Vision Screen
 
 Use camera for visual intelligence.
-
+![](./screenshots/vision.jpeg)
 #### Features:
 - **Camera View**: Real-time camera preview
 - **Capture**: Take photos for analysis
