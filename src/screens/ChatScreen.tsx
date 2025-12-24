@@ -136,15 +136,21 @@ export default function ChatScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <View style={styles.avatar}>
-            <View style={styles.avatarInner} />
+        <TouchableOpacity 
+          style={styles.headerCenter}
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.headerCenter}>
+            <View style={styles.avatar}>
+              <View style={styles.avatarInner} />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>Yu</Text>
+              <Text style={styles.headerSubtitle}>Online</Text>
+            </View>
           </View>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Yu</Text>
-            <Text style={styles.headerSubtitle}>Online</Text>
-          </View>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('YuVision')}>
           <Ionicons name="camera-outline" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -193,19 +199,26 @@ export default function ChatScreen({ navigation }: any) {
           ))}
         </ScrollView>
 
-        {isListening && (
+        {isListening ? (
           <View style={styles.listeningContainer}>
             <AudioVisualization isActive={true} />
             <Text style={styles.listeningText}>Listening...</Text>
           </View>
-        )}
-
-        {isRecording && (
-          <View style={styles.listeningContainer}>
-            <AudioVisualization isActive={true} />
-            <Text style={styles.listeningText}>Recording...</Text>
+        ) : isRecording ? (
+          <View style={styles.recordingCard}>
+            <View style={styles.recordingCardContent}>
+              <AudioVisualization isActive={true} />
+              <Text style={styles.recordingText}>Recording...</Text>
+              <TouchableOpacity 
+                style={styles.stopRecordingButton}
+                onPress={handleRecord}
+              >
+                <Ionicons name="stop" size={20} color={colors.text} />
+                <Text style={styles.stopRecordingText}>Stop</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
+        ) : null}
 
         <View style={styles.inputContainer}>
           <TouchableOpacity 
@@ -215,7 +228,7 @@ export default function ChatScreen({ navigation }: any) {
             <Ionicons 
               name={isRecording ? "mic" : "mic-outline"} 
               size={24} 
-              color={isRecording ? colors.purple : colors.text} 
+              color={isRecording ? colors.red : colors.text} 
             />
           </TouchableOpacity>
           <TextInput
@@ -226,17 +239,16 @@ export default function ChatScreen({ navigation }: any) {
             onChangeText={setMessage}
             onSubmitEditing={handleSend}
             multiline
-            editable={!isRecording}
           />
           <TouchableOpacity 
             style={styles.sendButton}
             onPress={handleSend}
-            disabled={!message.trim() || isRecording}
+            disabled={!message.trim()}
           >
             <Ionicons 
               name="send" 
               size={20} 
-              color={message.trim() && !isRecording ? colors.text : colors.textSecondary} 
+              color={message.trim() ? colors.text : colors.textSecondary} 
             />
           </TouchableOpacity>
         </View>
@@ -349,10 +361,6 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     padding: 8,
-  },
-  inputIconRecording: {
-    backgroundColor: colors.purple + '20',
-    borderRadius: 20,
   },
   input: {
     flex: 1,
