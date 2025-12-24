@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import StatusBar from '../components/StatusBar';
+import { speak } from '../utils/speech';
 import { colors, typography } from '../theme';
 
 const { width, height } = Dimensions.get('window');
@@ -57,7 +57,10 @@ export default function YuVisionScreen({ navigation }: any) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>No access to camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+        <TouchableOpacity 
+          onPress={requestPermission} 
+          style={styles.permissionButton}
+        >
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
@@ -66,8 +69,6 @@ export default function YuVisionScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar time="1:57" battery="54%" />
-      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -115,11 +116,17 @@ export default function YuVisionScreen({ navigation }: any) {
 
       <View style={styles.bottomSection}>
         <Text style={styles.instructionText}>Point at anything to analyze</Text>
-        <Animated.View style={[styles.captureButton, { transform: [{ scale: pulseAnim }] }]}>
+          <Animated.View style={[styles.captureButton, { transform: [{ scale: pulseAnim }] }]}>
           <TouchableOpacity
             style={styles.captureButtonInner}
-            onPress={() => {
-              // Handle capture/analysis
+            onPress={async () => {
+              // Mock capture and analysis speech
+              const mockAnalysis = "I've captured the image. I can see various objects in the frame. This appears to be a typical indoor environment with furniture and lighting. In the actual implementation, I would provide detailed object recognition and scene analysis.";
+              speak(mockAnalysis, {
+                language: 'en',
+                pitch: 1.0,
+                rate: 0.85,
+              });
             }}
           >
             <Ionicons name="flash" size={32} color={colors.text} />

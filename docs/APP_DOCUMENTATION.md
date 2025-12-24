@@ -410,12 +410,12 @@ npm start
 ## Support
 
 ### Documentation
-- [Feature Documentation](./docs/FEATURES.md)
-- [Component API](./docs/COMPONENT_API.md)
-- [Architecture](./docs/ARCHITECTURE.md)
+- [Feature Documentation](./FEATURES.md)
+- [Component API](./COMPONENT_API.md)
+- [Architecture](./ARCHITECTURE.md)
 
 ### Issues
-- Check [Issues Documentation](./docs/Issues/) for known issues
+- Check [Issues Documentation](./Issues/) for known issues
 - Report bugs via GitHub Issues
 - Check Expo documentation for platform-specific issues
 

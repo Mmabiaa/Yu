@@ -10,7 +10,6 @@ import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
 import YuVisionScreen from './src/screens/YuVisionScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import TranslateScreen from './src/screens/TranslateScreen';
-import ListeningScreen from './src/screens/ListeningScreen';
 
 const Stack = createStackNavigator();
 
@@ -26,12 +25,31 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen 
+            name="Profile" 
+            component={ProfileScreen}
+            options={{
+              presentation: 'modal',
+              cardStyleInterpolator: ({ current, layouts }) => {
+                return {
+                  cardStyle: {
+                    transform: [
+                      {
+                        translateY: current.progress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-layouts.screen.height, 0],
+                        }),
+                      },
+                    ],
+                  },
+                };
+              },
+            }}
+          />
           <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
           <Stack.Screen name="YuVision" component={YuVisionScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Translate" component={TranslateScreen} />
-          <Stack.Screen name="Listening" component={ListeningScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

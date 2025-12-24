@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import StatusBar from '../components/StatusBar';
+import { speak } from '../utils/speech';
 import YuOrb from '../components/YuOrb';
+import AudioVisualization from '../components/AudioVisualization';
 import { colors, typography } from '../theme';
 
 const { width } = Dimensions.get('window');
 
+const mockResponses: { [key: string]: string } = {
+  'hello': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'hi': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'hey': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'default': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+};
+
 export default function HomeScreen({ navigation }: any) {
+  const [isListening, setIsListening] = useState(false);
+  const [response, setResponse] = useState('');
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -32,14 +42,45 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const quickActions = [
+    { id: 'vision', title: 'Yu-Vision', subtitle: 'See & understand', color: colors.purple, icon: 'camera-outline' },
+    { id: 'voice', title: 'Yu-Voice', subtitle: 'Talk naturally', color: '#06B6D4', icon: 'mic-outline' },
     { id: 'translate', title: 'Yu- Translate', subtitle: 'Break barriers', color: colors.green, icon: 'globe-outline' },
     { id: 'control', title: 'Yu-Control', subtitle: 'Master devices', color: colors.red, icon: 'phone-portrait-outline' },
   ];
 
+  useEffect(() => {
+    if (isListening) {
+      // Auto-stop listening after 3 seconds
+      const timer = setTimeout(() => {
+        setIsListening(false);
+        // Mock response - always use the greeting
+        const mockResponse = "Hey there! I'm Yu, your digital twin. How can I help you today?";
+        setResponse(mockResponse);
+        
+        // Speak the response
+        speak(mockResponse, {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.9,
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isListening]);
+
+  const handleOrbTap = () => {
+    // Clear previous response and start listening
+    setResponse('');
+    setIsListening(true);
+  };
+
+  const handleOrbLongPress = () => {
+    navigation.navigate('Profile');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar />
-      
       <View style={styles.header}>
         <View>
           <Text style={styles.date}>{getDate()}</Text>
@@ -56,17 +97,29 @@ export default function HomeScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <YuOrb 
-          onTap={() => navigation.navigate('Listening')}
+          onTap={handleOrbTap}
           onDoubleTap={() => navigation.navigate('YuVision')}
+          onHold={handleOrbLongPress}
+          listening={isListening}
         />
-        <Text style={styles.tapInstruction}>Tap to start</Text>
+        {isListening ? (
+          <>
+            <View style={styles.visualizationContainer}>
+              <AudioVisualization isActive={true} />
+            </View>
+            <Text style={styles.listeningText}>Listening...</Text>
+          </>
+        ) : response ? (
+          <View style={styles.responseContainer}>
+            <Text style={styles.responseText}>{response}</Text>
+          </View>
+        ) : (
+          <Text style={styles.tapInstruction}>Tap to start</Text>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all &gt;</Text>
-            </TouchableOpacity>
           </View>
           
           <ScrollView 
@@ -79,8 +132,14 @@ export default function HomeScreen({ navigation }: any) {
                 key={action.id}
                 style={[styles.quickActionCard, { backgroundColor: action.color }]}
                 onPress={() => {
-                  if (action.id === 'translate') {
+                  if (action.id === 'vision') {
+                    navigation.navigate('YuVision');
+                  } else if (action.id === 'voice') {
+                    handleOrbTap();
+                  } else if (action.id === 'translate') {
                     navigation.navigate('Translate');
+                  } else if (action.id === 'control') {
+                    navigation.navigate('Chat');
                   }
                 }}
               >
@@ -99,7 +158,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           <View style={styles.insightCard}>
-            <Ionicons name="brain-outline" size={24} color={colors.purple} />
+            <Ionicons name="bulb-outline" size={24} color={colors.purple} />
             <View style={styles.insightContent}>
               <Text style={styles.insightTitle}>Memory</Text>
               <Text style={styles.insightSubtitle}>Ready to learn your preferences</Text>
@@ -136,8 +195,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   date: {
     ...typography.bodySmall,
@@ -156,10 +215,10 @@ const styles = StyleSheet.create({
   },
   tapInstruction: {
     ...typography.body,
-    color: colors.text,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: -10,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 32,
   },
   section: {
     paddingHorizontal: 20,
@@ -189,6 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     gap: 8,
+    marginRight: 12,
   },
   quickActionTitle: {
     ...typography.body,
@@ -237,6 +297,27 @@ const styles = StyleSheet.create({
   footerSubtext: {
     ...typography.bodySmall,
     color: colors.text,
+  },
+  visualizationContainer: {
+    marginVertical: 20,
+  },
+  listeningText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  responseContainer: {
+    backgroundColor: colors.surfaceLight,
+    padding: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  responseText: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 24,
   },
 });
 
