@@ -44,6 +44,8 @@ export default function ChatScreen({ navigation }: any) {
     },
   ]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [shouldSpeak, setShouldSpeak] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const getMockResponse = (userMessage: string): string => {
@@ -68,7 +70,9 @@ export default function ChatScreen({ navigation }: any) {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentShouldSpeak = shouldSpeak;
     setMessage('');
+    setShouldSpeak(false);
 
     // Simulate response delay
     setTimeout(() => {
@@ -82,12 +86,14 @@ export default function ChatScreen({ navigation }: any) {
 
       setMessages(prev => [...prev, yuMessage]);
       
-      // Speak the response
-      speak(responseText, {
-        language: 'en',
-        pitch: 1.0,
-        rate: 0.9,
-      });
+      // Only speak if message came from voice recording
+      if (currentShouldSpeak) {
+        speak(responseText, {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.9,
+        });
+      }
     }, 500);
   };
 
@@ -95,17 +101,24 @@ export default function ChatScreen({ navigation }: any) {
     if (isRecording) {
       // Stop recording and process speech-to-text
       setIsRecording(false);
+      setIsListening(true);
+      
       // Mock: simulate speech-to-text result
-      const mockTranscription = 'Hello, how can you help me?';
-      setMessage(mockTranscription);
+      setTimeout(() => {
+        setIsListening(false);
+        const mockTranscription = 'What can you help me with?';
+        setMessage(mockTranscription);
+        setShouldSpeak(true);
+      }, 1500);
     } else {
       // Start recording
       setIsRecording(true);
-      // Mock recording - stop after 3 seconds
+      
+      // Auto-stop after 3 seconds for demo purposes
       setTimeout(() => {
-        setIsRecording(false);
-        const mockTranscription = 'Hello, how can you help me?';
-        setMessage(mockTranscription);
+        if (isRecording) {
+          handleRecord(); // Stop recording
+        }
       }, 3000);
     }
   };
@@ -148,7 +161,13 @@ export default function ChatScreen({ navigation }: any) {
           contentContainerStyle={styles.messagesContent}
         >
           {messages.map((msg) => (
-            <View key={msg.id} style={styles.messageContainer}>
+            <View 
+              key={msg.id} 
+              style={[
+                styles.messageContainer,
+                msg.sender === 'user' && styles.userMessageContainer
+              ]}
+            >
               {msg.sender === 'yu' && (
                 <View style={styles.messageHeader}>
                   <Ionicons name="star" size={16} color={colors.purple} />
@@ -161,60 +180,66 @@ export default function ChatScreen({ navigation }: any) {
                   msg.sender === 'user' && styles.userMessageBubble,
                 ]}
               >
-                <Text style={styles.messageText}>{msg.text}</Text>
+                <Text 
+                  style={[
+                    styles.messageText,
+                    msg.sender === 'user' && styles.userMessageText
+                  ]}
+                >
+                  {msg.text}
+                </Text>
               </View>
             </View>
           ))}
         </ScrollView>
 
-        {isRecording ? (
-          <View style={styles.recordingCard}>
-            <View style={styles.recordingCardContent}>
-              <AudioVisualization isActive={true} />
-              <Text style={styles.recordingText}>Recording...</Text>
-              <TouchableOpacity 
-                style={styles.stopRecordingButton}
-                onPress={handleRecord}
-              >
-                <Ionicons name="stop" size={20} color={colors.text} />
-                <Text style={styles.stopRecordingText}>Stop</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.inputContainer}>
-            <TouchableOpacity 
-              style={[styles.inputIcon, isRecording && styles.inputIconRecording]}
-              onPress={handleRecord}
-            >
-              <Ionicons 
-                name={isRecording ? "mic" : "mic-outline"} 
-                size={24} 
-                color={isRecording ? colors.red : colors.text} 
-              />
-            </TouchableOpacity>
-            <TextInput
-              style={styles.input}
-              placeholder="Message Yu..."
-              placeholderTextColor={colors.textSecondary}
-              value={message}
-              onChangeText={setMessage}
-              onSubmitEditing={handleSend}
-              multiline
-            />
-            <TouchableOpacity 
-              style={styles.sendButton}
-              onPress={handleSend}
-              disabled={!message.trim()}
-            >
-              <Ionicons 
-                name="send" 
-                size={20} 
-                color={message.trim() ? colors.text : colors.textSecondary} 
-              />
-            </TouchableOpacity>
+        {isListening && (
+          <View style={styles.listeningContainer}>
+            <AudioVisualization isActive={true} />
+            <Text style={styles.listeningText}>Listening...</Text>
           </View>
         )}
+
+        {isRecording && (
+          <View style={styles.listeningContainer}>
+            <AudioVisualization isActive={true} />
+            <Text style={styles.listeningText}>Recording...</Text>
+          </View>
+        )}
+
+        <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            style={[styles.inputIcon, isRecording && styles.inputIconRecording]}
+            onPress={handleRecord}
+          >
+            <Ionicons 
+              name={isRecording ? "mic" : "mic-outline"} 
+              size={24} 
+              color={isRecording ? colors.purple : colors.text} 
+            />
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Message Yu..."
+            placeholderTextColor={colors.textSecondary}
+            value={message}
+            onChangeText={setMessage}
+            onSubmitEditing={handleSend}
+            multiline
+            editable={!isRecording}
+          />
+          <TouchableOpacity 
+            style={styles.sendButton}
+            onPress={handleSend}
+            disabled={!message.trim() || isRecording}
+          >
+            <Ionicons 
+              name="send" 
+              size={20} 
+              color={message.trim() && !isRecording ? colors.text : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -281,6 +306,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '85%',
   },
+  userMessageContainer: {
+    alignSelf: 'flex-end',
+  },
   messageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,10 +330,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.purple,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 4,
-    alignSelf: 'flex-end',
   },
   messageText: {
     ...typography.body,
+    color: colors.text,
+  },
+  userMessageText: {
     color: colors.text,
   },
   inputContainer: {
@@ -319,6 +349,10 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     padding: 8,
+  },
+  inputIconRecording: {
+    backgroundColor: colors.purple + '20',
+    borderRadius: 20,
   },
   input: {
     flex: 1,
@@ -369,5 +403,15 @@ const styles = StyleSheet.create({
   inputIconRecording: {
     backgroundColor: colors.red + '20',
     borderRadius: 20,
+  },
+  listeningContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 12,
+  },
+  listeningText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
   },
 });
