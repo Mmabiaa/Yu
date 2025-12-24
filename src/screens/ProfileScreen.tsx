@@ -6,27 +6,38 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../theme';
+import YuOrb from '../components/YuOrb';
+
+const personalities = [
+  { id: 'assistant', title: 'Assistant', subtitle: 'Helpful and formal' },
+  { id: 'friend', title: 'Friend', subtitle: 'Casual and empathetic' },
+  { id: 'expert', title: 'Expert', subtitle: 'Efficient and technical' },
+  { id: 'minimalist', title: 'Minimalist', subtitle: 'Quiet and unobtrusive' },
+];
 
 const presenceLevels = [
-  { id: 'full', title: 'Full Yu', subtitle: 'Complete interaction', selected: true },
-  { id: 'quiet', title: 'Quiet Yu', subtitle: 'Notifications only', selected: false },
-  { id: 'shadow', title: 'Shadow Yu', subtitle: 'Passive learning', selected: false },
-  { id: 'off', title: 'Off', subtitle: 'Complete privacy', selected: false },
+  { id: 'full', title: 'Full Yu', subtitle: 'Complete interaction' },
+  { id: 'quiet', title: 'Quiet Yu', subtitle: 'Notifications only' },
+  { id: 'shadow', title: 'Shadow Yu', subtitle: 'Passive learning' },
+  { id: 'off', title: 'Off', subtitle: 'Complete privacy' },
 ];
 
 const settings = [
-  { id: 'notifications', title: 'Notifications', subtitle: 'Manage alerts', icon: 'notifications-outline', color: colors.blue },
+  { id: 'notifications', title: 'Notifications', subtitle: 'Manage alerts', icon: 'notifications-outline', color: '#60A5FA' },
   { id: 'privacy', title: 'Privacy', subtitle: 'Data controls', icon: 'lock-closed-outline', color: colors.purple },
   { id: 'voice', title: 'Voice & Sound', subtitle: 'Audio preferences', icon: 'volume-high-outline', color: colors.green },
   { id: 'help', title: 'Help & Support', subtitle: 'Get assistance', icon: 'help-circle-outline', color: colors.orange },
 ];
 
 export default function ProfileScreen({ navigation }: any) {
+  const [selectedPersonality, setSelectedPersonality] = useState('friend');
   const [selectedPresence, setSelectedPresence] = useState('full');
+  const [userName, setUserName] = useState('');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -43,6 +54,67 @@ export default function ProfileScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Yu Orb */}
+        <YuOrb />
+
+        {/* Set your name section */}
+        <View style={styles.nameSection}>
+          <Text style={styles.nameHeading}>Set your name</Text>
+          <Text style={styles.nameSubtitle}>Yu is ready to assist</Text>
+        </View>
+
+        {/* Your Name Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>YOUR NAME</Text>
+          <TouchableOpacity style={styles.nameInput}>
+            <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.nameInputIcon} />
+            <TextInput
+              style={styles.nameInputText}
+              placeholder="Tap to set your name"
+              placeholderTextColor={colors.textSecondary}
+              value={userName}
+              onChangeText={setUserName}
+            />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Yu Personality Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>YU PERSONALITY</Text>
+          <View style={styles.personalityGrid}>
+            {personalities.map((personality) => (
+              <TouchableOpacity
+                key={personality.id}
+                style={[
+                  styles.personalityOption,
+                  selectedPersonality === personality.id && styles.personalityOptionSelected,
+                ]}
+                onPress={() => setSelectedPersonality(personality.id)}
+              >
+                {selectedPersonality === personality.id && (
+                  <View style={styles.checkmarkContainer}>
+                    <Ionicons name="checkmark" size={16} color={colors.text} />
+                  </View>
+                )}
+                <Text style={[
+                  styles.personalityTitle,
+                  selectedPersonality === personality.id && styles.personalityTitleSelected
+                ]}>
+                  {personality.title}
+                </Text>
+                <Text style={[
+                  styles.personalitySubtitle,
+                  selectedPersonality === personality.id && styles.personalitySubtitleSelected
+                ]}>
+                  {personality.subtitle}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Presence Level Section */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>PRESENCE LEVEL</Text>
           {presenceLevels.map((level) => (
@@ -65,6 +137,7 @@ export default function ProfileScreen({ navigation }: any) {
           ))}
         </View>
 
+        {/* Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>SETTINGS</Text>
           {settings.map((setting) => (
@@ -72,13 +145,12 @@ export default function ProfileScreen({ navigation }: any) {
               key={setting.id}
               style={styles.settingOption}
               onPress={() => {
-                // All settings buttons are functional
                 if (setting.id === 'notifications') {
                   Alert.alert('Notifications', 'Manage your alert preferences here');
                 } else if (setting.id === 'privacy') {
                   Alert.alert('Privacy', 'Control your data and privacy settings');
                 } else if (setting.id === 'voice') {
-                  Alert.alert('Voice & Sound', 'Adjust audio preferences and voice settings');
+                  navigation.navigate('Chat');
                 } else if (setting.id === 'help') {
                   Alert.alert('Help & Support', 'Get assistance and access support resources');
                 }
@@ -96,6 +168,7 @@ export default function ProfileScreen({ navigation }: any) {
           ))}
         </View>
 
+        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Yu v1.0.0</Text>
           <Text style={styles.footerTagline}>You, enhanced</Text>
@@ -120,12 +193,28 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.h2,
     color: colors.text,
+    fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  nameSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  nameHeading: {
+    ...typography.h1,
+    color: colors.text,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  nameSubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   section: {
     paddingHorizontal: 20,
@@ -135,6 +224,71 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.textSecondary,
     marginBottom: 12,
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  nameInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceLight,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  nameInputIcon: {
+    marginRight: 12,
+  },
+  nameInputText: {
+    flex: 1,
+    ...typography.body,
+    color: colors.text,
+  },
+  personalityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  personalityOption: {
+    width: '47%',
+    backgroundColor: colors.surfaceLight,
+    padding: 16,
+    borderRadius: 12,
+    position: 'relative',
+    minHeight: 100,
+    justifyContent: 'flex-start',
+  },
+  personalityOptionSelected: {
+    backgroundColor: colors.purple,
+  },
+  checkmarkContainer: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  personalityTitle: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  personalityTitleSelected: {
+    color: colors.text,
+  },
+  personalitySubtitle: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  personalitySubtitleSelected: {
+    color: colors.textSecondary,
   },
   presenceOption: {
     flexDirection: 'row',
@@ -207,4 +361,3 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
-
