@@ -57,7 +57,10 @@ export default function YuVisionScreen({ navigation }: any) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>No access to camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+        <TouchableOpacity 
+          onPress={requestPermission} 
+          style={styles.permissionButton}
+        >
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
