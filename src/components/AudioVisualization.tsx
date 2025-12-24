@@ -7,12 +7,23 @@ const BAR_COUNT = 40;
 const BAR_WIDTH = 3;
 const BAR_SPACING = 2;
 
-export default function AudioVisualization() {
+interface AudioVisualizationProps {
+  isActive?: boolean;
+}
+
+export default function AudioVisualization({ isActive = true }: AudioVisualizationProps) {
   const animations = useRef(
     Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.1))
   ).current;
 
   useEffect(() => {
+    if (!isActive) {
+      // Stop all animations
+      animations.forEach(anim => anim.stopAnimation());
+      animations.forEach(anim => anim.setValue(0.1));
+      return;
+    }
+
     const animateBars = () => {
       const animationsArray = animations.map((anim, index) => {
         const delay = index * 20;
@@ -40,7 +51,8 @@ export default function AudioVisualization() {
     };
 
     animateBars();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
 
   return (
     <View style={styles.container}>

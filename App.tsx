@@ -10,7 +10,6 @@ import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
 import YuVisionScreen from './src/screens/YuVisionScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import TranslateScreen from './src/screens/TranslateScreen';
-import ListeningScreen from './src/screens/ListeningScreen';
 
 const Stack = createStackNavigator();
 
@@ -51,7 +50,6 @@ export default function App() {
           <Stack.Screen name="YuVision" component={YuVisionScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Translate" component={TranslateScreen} />
-          <Stack.Screen name="Listening" component={ListeningScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
