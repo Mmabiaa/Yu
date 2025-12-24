@@ -26,7 +26,27 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen 
+            name="Profile" 
+            component={ProfileScreen}
+            options={{
+              presentation: 'modal',
+              cardStyleInterpolator: ({ current, layouts }) => {
+                return {
+                  cardStyle: {
+                    transform: [
+                      {
+                        translateY: current.progress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-layouts.screen.height, 0],
+                        }),
+                      },
+                    ],
+                  },
+                };
+              },
+            }}
+          />
           <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
           <Stack.Screen name="YuVision" component={YuVisionScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />

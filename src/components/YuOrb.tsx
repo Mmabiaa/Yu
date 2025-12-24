@@ -65,7 +65,7 @@ export default function YuOrb({
         ]}
       >
         <LinearGradient
-          colors={['#3B82F6', '#8B5CF6', '#10B981']}
+          colors={['#3B82F6', '#60A5FA', '#8B5CF6', '#10B981']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.glow}
@@ -101,28 +101,33 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
+    marginVertical: 32,
   },
   glowContainer: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
   },
   glow: {
     flex: 1,
-    borderRadius: 100,
-    opacity: 0.3,
+    borderRadius: 90,
+    opacity: 0.4,
   },
   orbContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: '#1A1A1A',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.blueLight,
+    borderWidth: 3,
+    borderColor: '#06B6D4',
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 25,
+    elevation: 10,
   },
   orb: {
     width: '100%',
@@ -131,19 +136,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   orbInner: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: '#2A2A2A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   orbEye: {
-    width: 20,
-    height: 8,
-    borderRadius: 4,
+    width: 24,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#A0A0A0',
-    marginLeft: -10,
+    marginLeft: -12,
   },
 });
 

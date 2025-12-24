@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import StatusBar from '../components/StatusBar';
 import { colors, typography } from '../theme';
 
 const { width, height } = Dimensions.get('window');
@@ -69,8 +68,6 @@ export default function YuVisionScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar time="1:57" battery="54%" />
-      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />

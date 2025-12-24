@@ -8,11 +8,32 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import StatusBar from '../components/StatusBar';
 import AudioVisualization from '../components/AudioVisualization';
 import { colors, typography } from '../theme';
 
+const mockResponses: { [key: string]: string } = {
+  'hello': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'hi': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'hey': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+  'default': "Hey there! I'm Yu, your digital twin. How can I help you today?",
+};
+
 export default function ListeningScreen({ navigation }: any) {
+  const [isListening, setIsListening] = React.useState(true);
+  const [response, setResponse] = React.useState('');
+
+  React.useEffect(() => {
+    // Auto-stop listening after 3 seconds
+    const timer = setTimeout(() => {
+      setIsListening(false);
+      // Mock response
+      const userInput = 'hello'; // In real app, this would be from speech recognition
+      const mockResponse = mockResponses[userInput.toLowerCase()] || mockResponses['default'];
+      setResponse(mockResponse);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -29,8 +50,6 @@ export default function ListeningScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar />
-      
       <View style={styles.header}>
         <View>
           <Text style={styles.date}>{getDate()}</Text>
@@ -46,10 +65,18 @@ export default function ListeningScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.visualizationContainer}>
-          <AudioVisualization />
-        </View>
-        <Text style={styles.listeningText}>Listening...</Text>
+        {isListening ? (
+          <>
+            <View style={styles.visualizationContainer}>
+              <AudioVisualization />
+            </View>
+            <Text style={styles.listeningText}>Listening...</Text>
+          </>
+        ) : response ? (
+          <View style={styles.responseContainer}>
+            <Text style={styles.responseText}>{response}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -208,6 +235,18 @@ const styles = StyleSheet.create({
   insightSubtitle: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+  },
+  responseContainer: {
+    backgroundColor: colors.surfaceLight,
+    padding: 20,
+    borderRadius: 16,
+    marginVertical: 20,
+    marginHorizontal: 20,
+  },
+  responseText: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 24,
   },
 });
 

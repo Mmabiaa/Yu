@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import StatusBar from '../components/StatusBar';
 import YuOrb from '../components/YuOrb';
 import { colors, typography } from '../theme';
 
@@ -32,14 +31,14 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const quickActions = [
+    { id: 'vision', title: 'Yu-Vision', subtitle: 'See & understand', color: colors.purple, icon: 'camera-outline' },
+    { id: 'voice', title: 'Yu-Voice', subtitle: 'Talk naturally', color: '#06B6D4', icon: 'mic-outline' },
     { id: 'translate', title: 'Yu- Translate', subtitle: 'Break barriers', color: colors.green, icon: 'globe-outline' },
     { id: 'control', title: 'Yu-Control', subtitle: 'Master devices', color: colors.red, icon: 'phone-portrait-outline' },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar />
-      
       <View style={styles.header}>
         <View>
           <Text style={styles.date}>{getDate()}</Text>
@@ -58,6 +57,7 @@ export default function HomeScreen({ navigation }: any) {
         <YuOrb 
           onTap={() => navigation.navigate('Listening')}
           onDoubleTap={() => navigation.navigate('YuVision')}
+          onHold={() => navigation.navigate('Profile')}
         />
         <Text style={styles.tapInstruction}>Tap to start</Text>
 
@@ -79,7 +79,11 @@ export default function HomeScreen({ navigation }: any) {
                 key={action.id}
                 style={[styles.quickActionCard, { backgroundColor: action.color }]}
                 onPress={() => {
-                  if (action.id === 'translate') {
+                  if (action.id === 'vision') {
+                    navigation.navigate('YuVision');
+                  } else if (action.id === 'voice') {
+                    navigation.navigate('Listening');
+                  } else if (action.id === 'translate') {
                     navigation.navigate('Translate');
                   }
                 }}
@@ -136,8 +140,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   date: {
     ...typography.bodySmall,
@@ -156,10 +160,10 @@ const styles = StyleSheet.create({
   },
   tapInstruction: {
     ...typography.body,
-    color: colors.text,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: -10,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 32,
   },
   section: {
     paddingHorizontal: 20,
@@ -189,6 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     gap: 8,
+    marginRight: 12,
   },
   quickActionTitle: {
     ...typography.body,
