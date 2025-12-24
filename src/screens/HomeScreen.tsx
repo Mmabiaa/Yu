@@ -53,9 +53,8 @@ export default function HomeScreen({ navigation }: any) {
       // Auto-stop listening after 3 seconds
       const timer = setTimeout(() => {
         setIsListening(false);
-        // Mock response
-        const userInput = 'hello'; // In real app, this would be from speech recognition
-        const mockResponse = mockResponses[userInput.toLowerCase()] || mockResponses['default'];
+        // Mock response - always use the greeting
+        const mockResponse = "Hey there! I'm Yu, your digital twin. How can I help you today?";
         setResponse(mockResponse);
         
         // Speak the response
@@ -159,7 +158,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           <View style={styles.insightCard}>
-            <Ionicons name="brain-outline" size={24} color={colors.purple} />
+            <Ionicons name="bulb-outline" size={24} color={colors.purple} />
             <View style={styles.insightContent}>
               <Text style={styles.insightTitle}>Memory</Text>
               <Text style={styles.insightSubtitle}>Ready to learn your preferences</Text>

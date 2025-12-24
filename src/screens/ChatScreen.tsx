@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { speak } from '../utils/speech';
+import AudioVisualization from '../components/AudioVisualization';
 import { colors, typography } from '../theme';
 
 interface Message {
@@ -42,6 +43,7 @@ export default function ChatScreen({ navigation }: any) {
       timestamp: new Date(),
     },
   ]);
+  const [isRecording, setIsRecording] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const getMockResponse = (userMessage: string): string => {
@@ -89,6 +91,25 @@ export default function ChatScreen({ navigation }: any) {
     }, 500);
   };
 
+  const handleRecord = () => {
+    if (isRecording) {
+      // Stop recording and process speech-to-text
+      setIsRecording(false);
+      // Mock: simulate speech-to-text result
+      const mockTranscription = 'Hello, how can you help me?';
+      setMessage(mockTranscription);
+    } else {
+      // Start recording
+      setIsRecording(true);
+      // Mock recording - stop after 3 seconds
+      setTimeout(() => {
+        setIsRecording(false);
+        const mockTranscription = 'Hello, how can you help me?';
+        setMessage(mockTranscription);
+      }, 3000);
+    }
+  };
+
   useEffect(() => {
     // Scroll to bottom when new message is added
     setTimeout(() => {
@@ -111,7 +132,7 @@ export default function ChatScreen({ navigation }: any) {
             <Text style={styles.headerSubtitle}>Online</Text>
           </View>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('YuVision')}>
           <Ionicons name="camera-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -146,31 +167,54 @@ export default function ChatScreen({ navigation }: any) {
           ))}
         </ScrollView>
 
-        <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.inputIcon}>
-            <Ionicons name="mic-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.input}
-            placeholder="Message Yu..."
-            placeholderTextColor={colors.textSecondary}
-            value={message}
-            onChangeText={setMessage}
-            onSubmitEditing={handleSend}
-            multiline
-          />
-          <TouchableOpacity 
-            style={styles.sendButton}
-            onPress={handleSend}
-            disabled={!message.trim()}
-          >
-            <Ionicons 
-              name="send" 
-              size={20} 
-              color={message.trim() ? colors.text : colors.textSecondary} 
+        {isRecording ? (
+          <View style={styles.recordingCard}>
+            <View style={styles.recordingCardContent}>
+              <AudioVisualization isActive={true} />
+              <Text style={styles.recordingText}>Recording...</Text>
+              <TouchableOpacity 
+                style={styles.stopRecordingButton}
+                onPress={handleRecord}
+              >
+                <Ionicons name="stop" size={20} color={colors.text} />
+                <Text style={styles.stopRecordingText}>Stop</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.inputContainer}>
+            <TouchableOpacity 
+              style={[styles.inputIcon, isRecording && styles.inputIconRecording]}
+              onPress={handleRecord}
+            >
+              <Ionicons 
+                name={isRecording ? "mic" : "mic-outline"} 
+                size={24} 
+                color={isRecording ? colors.red : colors.text} 
+              />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              placeholder="Message Yu..."
+              placeholderTextColor={colors.textSecondary}
+              value={message}
+              onChangeText={setMessage}
+              onSubmitEditing={handleSend}
+              multiline
             />
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={styles.sendButton}
+              onPress={handleSend}
+              disabled={!message.trim()}
+            >
+              <Ionicons 
+                name="send" 
+                size={20} 
+                color={message.trim() ? colors.text : colors.textSecondary} 
+              />
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -288,5 +332,42 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     padding: 8,
+  },
+  recordingCard: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.purple,
+  },
+  recordingCardContent: {
+    padding: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  recordingText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  stopRecordingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.red,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  stopRecordingText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  inputIconRecording: {
+    backgroundColor: colors.red + '20',
+    borderRadius: 20,
   },
 });

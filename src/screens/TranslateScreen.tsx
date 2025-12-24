@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { speak } from '../utils/speech';
 import * as Clipboard from 'expo-clipboard';
+import AudioVisualization from '../components/AudioVisualization';
 import { colors, typography } from '../theme';
 
 const languages = [
@@ -61,20 +62,28 @@ export default function TranslateScreen({ navigation }: any) {
 
   const handleRecordAudio = () => {
     if (isRecording) {
-      // Stop recording and translate
+      // Stop recording and process speech-to-text
       setIsRecording(false);
-      // Mock: simulate recording "Hello"
-      setInputText('Hello');
-      handleTranslate();
+      // Mock: simulate speech-to-text result
+      const mockTranscription = 'Hello';
+      setInputText(mockTranscription);
+      // Auto-translate after getting the text
+      setTimeout(() => {
+        handleTranslate();
+      }, 100);
     } else {
       // Start recording
       setIsRecording(true);
-      // Mock recording - stop after 2 seconds
+      // Mock recording - stop after 3 seconds and process speech-to-text
       setTimeout(() => {
         setIsRecording(false);
-        setInputText('Hello');
-        handleTranslate();
-      }, 2000);
+        const mockTranscription = 'Hello';
+        setInputText(mockTranscription);
+        // Auto-translate after getting the text
+        setTimeout(() => {
+          handleTranslate();
+        }, 100);
+      }, 3000);
     }
   };
 
@@ -195,28 +204,44 @@ export default function TranslateScreen({ navigation }: any) {
             <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.inputHeaderText}>{fromLang.name}</Text>
           </View>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter text to translate..."
-              placeholderTextColor={colors.textSecondary}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <View style={styles.inputIcons}>
-              <TouchableOpacity 
-                style={[styles.micButton, isRecording && styles.micButtonRecording]}
-                onPress={handleRecordAudio}
-              >
-                <Ionicons 
-                  name={isRecording ? "mic" : "mic-outline"} 
-                  size={20} 
-                  color={isRecording ? colors.red : colors.textSecondary} 
-                />
-              </TouchableOpacity>
+          {isRecording ? (
+            <View style={styles.recordingCard}>
+              <View style={styles.recordingCardContent}>
+                <AudioVisualization isActive={true} />
+                <Text style={styles.recordingText}>Recording...</Text>
+                <TouchableOpacity 
+                  style={styles.stopRecordingButton}
+                  onPress={handleRecordAudio}
+                >
+                  <Ionicons name="stop" size={20} color={colors.text} />
+                  <Text style={styles.stopRecordingText}>Stop</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter text to translate..."
+                placeholderTextColor={colors.textSecondary}
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
+              <View style={styles.inputIcons}>
+                <TouchableOpacity 
+                  style={[styles.micButton, isRecording && styles.micButtonRecording]}
+                  onPress={handleRecordAudio}
+                >
+                  <Ionicons 
+                    name={isRecording ? "mic" : "mic-outline"} 
+                    size={20} 
+                    color={isRecording ? colors.red : colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity style={styles.translateButton} onPress={handleTranslate}>
@@ -543,5 +568,37 @@ const styles = StyleSheet.create({
     flex: 1,
     ...typography.body,
     color: colors.text,
+  },
+  recordingCard: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.purple,
+    marginTop: 8,
+  },
+  recordingCardContent: {
+    padding: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  recordingText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  stopRecordingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.red,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  stopRecordingText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
   },
 });

@@ -116,12 +116,12 @@ export default function YuVisionScreen({ navigation }: any) {
 
       <View style={styles.bottomSection}>
         <Text style={styles.instructionText}>Point at anything to analyze</Text>
-        <Animated.View style={[styles.captureButton, { transform: [{ scale: pulseAnim }] }]}>
+          <Animated.View style={[styles.captureButton, { transform: [{ scale: pulseAnim }] }]}>
           <TouchableOpacity
             style={styles.captureButtonInner}
-            onPress={() => {
-              // Mock analysis speech
-              const mockAnalysis = "I can see various objects in the frame. This appears to be a typical indoor environment with furniture and lighting. In the actual implementation, I would provide detailed object recognition and scene analysis.";
+            onPress={async () => {
+              // Mock capture and analysis speech
+              const mockAnalysis = "I've captured the image. I can see various objects in the frame. This appears to be a typical indoor environment with furniture and lighting. In the actual implementation, I would provide detailed object recognition and scene analysis.";
               speak(mockAnalysis, {
                 language: 'en',
                 pitch: 1.0,
