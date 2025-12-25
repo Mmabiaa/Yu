@@ -39,6 +39,14 @@ export default function ProfileScreen({ navigation }: any) {
   const [selectedPresence, setSelectedPresence] = useState('full');
   const [userName, setUserName] = useState('');
 
+  const handleSaveName = () => {
+    if (userName.trim()) {
+      Alert.alert('Success', `Name saved as: ${userName}`);
+    } else {
+      Alert.alert('Error', 'Please enter your name');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -66,17 +74,19 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Your Name Input */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>YOUR NAME</Text>
-          <TouchableOpacity style={styles.nameInput}>
+          <View style={styles.nameInput}>
             <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.nameInputIcon} />
             <TextInput
               style={styles.nameInputText}
-              placeholder="Tap to set your name"
+              placeholder="Enter your name"
               placeholderTextColor={colors.textSecondary}
               value={userName}
               onChangeText={setUserName}
             />
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveName}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Yu Personality Section */}
@@ -230,11 +240,11 @@ const styles = StyleSheet.create({
   nameInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: '#1C1C2E',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#2A2A3E',
   },
   nameInputIcon: {
     marginRight: 12,
@@ -244,6 +254,18 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text,
   },
+  saveButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  saveButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 14,
+  },
   personalityGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -251,15 +273,18 @@ const styles = StyleSheet.create({
   },
   personalityOption: {
     width: '47%',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: '#1C1C2E',
     padding: 16,
     borderRadius: 12,
     position: 'relative',
     minHeight: 100,
     justifyContent: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#2A2A3E',
   },
   personalityOptionSelected: {
-    backgroundColor: colors.purple,
+    backgroundColor: '#2D1B69',
+    borderColor: '#8B5CF6',
   },
   checkmarkContainer: {
     position: 'absolute',
@@ -294,13 +319,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: '#1C1C2E',
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#2A2A3E',
   },
   presenceOptionSelected: {
-    backgroundColor: colors.purple,
+    backgroundColor: '#2D1B69',
+    borderColor: '#8B5CF6',
   },
   presenceContent: {
     flex: 1,
@@ -318,11 +346,13 @@ const styles = StyleSheet.create({
   settingOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: '#1C1C2E',
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     gap: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A3E',
   },
   settingIconContainer: {
     width: 40,
