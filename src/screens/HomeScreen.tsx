@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { speak } from '../utils/speech';
 import YuOrb from '../components/YuOrb';
 import AudioVisualization from '../components/AudioVisualization';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +25,7 @@ const mockResponses: { [key: string]: string } = {
 };
 
 export default function HomeScreen({ navigation }: any) {
+  const { theme } = useTheme();
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState('');
   
@@ -43,10 +44,10 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const quickActions = [
-    { id: 'vision', title: 'Yu-Vision', subtitle: 'See & understand', color: colors.purple, icon: 'camera-outline' },
+    { id: 'vision', title: 'Yu-Vision', subtitle: 'See & understand', color: theme.purple, icon: 'camera-outline' },
     { id: 'voice', title: 'Yu-Voice', subtitle: 'Talk naturally', color: '#06B6D4', icon: 'mic-outline' },
-    { id: 'translate', title: 'Yu- Translate', subtitle: 'Break barriers', color: colors.green, icon: 'globe-outline' },
-    { id: 'control', title: 'Yu-Control', subtitle: 'Master devices', color: colors.red, icon: 'phone-portrait-outline' },
+    { id: 'translate', title: 'Yu- Translate', subtitle: 'Break barriers', color: theme.green, icon: 'globe-outline' },
+    { id: 'control', title: 'Yu-Control', subtitle: 'Master devices', color: theme.red, icon: 'phone-portrait-outline' },
   ];
 
   useEffect(() => {
@@ -80,6 +81,8 @@ export default function HomeScreen({ navigation }: any) {
     navigation.navigate('Profile');
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -88,7 +91,7 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.greeting}>{getGreeting()}</Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
+          <Ionicons name="settings-outline" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -148,7 +151,7 @@ export default function HomeScreen({ navigation }: any) {
                   }
                 }}
               >
-                <Ionicons name={action.icon as any} size={32} color={colors.text} />
+                <Ionicons name={action.icon as any} size={32} color="#FFFFFF" />
                 <Text style={styles.quickActionTitle}>{action.title}</Text>
                 <Text style={styles.quickActionSubtitle}>{action.subtitle}</Text>
               </TouchableOpacity>
@@ -158,12 +161,12 @@ export default function HomeScreen({ navigation }: any) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="star" size={16} color={colors.purple} style={{ marginRight: 4 }} />
+            <Ionicons name="star" size={16} color={theme.purple} style={{ marginRight: 4 }} />
             <Text style={styles.sectionTitle}>Yu Insights</Text>
           </View>
 
           <View style={styles.insightCard}>
-            <Ionicons name="bulb-outline" size={24} color={colors.purple} />
+            <Ionicons name="bulb-outline" size={24} color={theme.purple} />
             <View style={styles.insightContent}>
               <Text style={styles.insightTitle}>Memory</Text>
               <Text style={styles.insightSubtitle}>Ready to learn your preferences</Text>
@@ -171,7 +174,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           <View style={styles.insightCard}>
-            <Ionicons name="star-outline" size={24} color={colors.purple} />
+            <Ionicons name="star-outline" size={24} color={theme.purple} />
             <View style={styles.insightContent}>
               <Text style={styles.insightTitle}>Status</Text>
               <Text style={styles.insightSubtitle}>All systems operational</Text>
@@ -190,10 +193,10 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -205,12 +208,12 @@ const styles = StyleSheet.create({
   },
   date: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   greeting: {
     ...typography.h1,
-    color: colors.text,
+    color: theme.text,
   },
   scrollView: {
     flex: 1,
@@ -220,7 +223,7 @@ const styles = StyleSheet.create({
   },
   tapInstruction: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 32,
@@ -236,11 +239,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h3,
-    color: colors.text,
+    color: theme.text,
   },
   seeAll: {
     ...typography.bodySmall,
-    color: colors.purple,
+    color: theme.purple,
     marginLeft: 'auto',
   },
   quickActionsContainer: {
@@ -257,37 +260,39 @@ const styles = StyleSheet.create({
   },
   quickActionTitle: {
     ...typography.body,
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '600',
     textAlign: 'center',
   },
   quickActionSubtitle: {
     ...typography.caption,
-    color: colors.text,
+    color: '#FFFFFF',
     opacity: 0.8,
     textAlign: 'center',
   },
   insightCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     gap: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   insightContent: {
     flex: 1,
   },
   insightTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
     marginBottom: 4,
   },
   insightSubtitle: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   footer: {
     paddingHorizontal: 20,
@@ -296,12 +301,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     ...typography.label,
-    color: colors.purple,
+    color: theme.purple,
     marginBottom: 8,
   },
   footerSubtext: {
     ...typography.bodySmall,
-    color: colors.text,
+    color: theme.text,
   },
   visualizationContainer: {
     marginTop: 60,
@@ -309,20 +314,22 @@ const styles = StyleSheet.create({
   },
   listeningText: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
   responseContainer: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     padding: 20,
     borderRadius: 16,
     marginHorizontal: 20,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   responseText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     lineHeight: 24,
   },
 });

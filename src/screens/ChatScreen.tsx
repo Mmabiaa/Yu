@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { speak } from '../utils/speech';
 import AudioVisualization from '../components/AudioVisualization';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface Message {
   id: string;
@@ -34,6 +35,7 @@ const mockResponses: { [key: string]: string } = {
 };
 
 export default function ChatScreen({ navigation }: any) {
+  const { theme } = useTheme();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -130,11 +132,13 @@ export default function ChatScreen({ navigation }: any) {
     }, 100);
   }, [messages]);
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.headerCenter}
@@ -150,7 +154,7 @@ export default function ChatScreen({ navigation }: any) {
           </View>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('YuVision')}>
-          <Ionicons name="camera-outline" size={24} color={colors.text} />
+          <Ionicons name="camera-outline" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -174,7 +178,7 @@ export default function ChatScreen({ navigation }: any) {
             >
               {msg.sender === 'yu' && (
                 <View style={styles.messageHeader}>
-                  <Ionicons name="star" size={16} color={colors.purple} />
+                  <Ionicons name="star" size={16} color={theme.purple} />
                   <Text style={styles.messageSender}>Yu</Text>
                 </View>
               )}
@@ -219,13 +223,13 @@ export default function ChatScreen({ navigation }: any) {
             <Ionicons 
               name={isRecording ? "mic" : "mic-outline"} 
               size={24} 
-              color={isRecording ? colors.purple : colors.text} 
+              color={isRecording ? theme.purple : theme.text} 
             />
           </TouchableOpacity>
           <TextInput
             style={styles.input}
             placeholder="Message Yu..."
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={theme.textSecondary}
             value={message}
             onChangeText={setMessage}
             onSubmitEditing={handleSend}
@@ -240,7 +244,7 @@ export default function ChatScreen({ navigation }: any) {
             <Ionicons 
               name="send" 
               size={20} 
-              color={message.trim() && !isRecording ? colors.text : colors.textSecondary} 
+              color={message.trim() && !isRecording ? theme.text : theme.textSecondary} 
             />
           </TouchableOpacity>
         </View>
@@ -249,10 +253,10 @@ export default function ChatScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   flex: {
     flex: 1,
@@ -264,7 +268,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: theme.border,
   },
   headerCenter: {
     flexDirection: 'row',
@@ -276,7 +280,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: colors.blue,
+    borderColor: theme.blue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -284,19 +288,19 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.blueLight,
+    backgroundColor: theme.blueLight,
   },
   headerText: {
     gap: 2,
   },
   headerTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
   },
   headerSubtitle: {
     ...typography.caption,
-    color: colors.text,
+    color: theme.text,
   },
   messagesContainer: {
     flex: 1,
@@ -321,26 +325,29 @@ const styles = StyleSheet.create({
   },
   messageSender: {
     ...typography.caption,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
   },
   messageBubble: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 16,
     borderTopLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   userMessageBubble: {
-    backgroundColor: colors.purple,
+    backgroundColor: theme.purple,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 4,
+    borderColor: theme.purple,
   },
   messageText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
   },
   userMessageText: {
-    color: colors.text,
+    color: '#FFFFFF',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -348,65 +355,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: theme.border,
     gap: 12,
   },
   inputIcon: {
     padding: 8,
   },
   inputIconRecording: {
-    backgroundColor: colors.purple + '20',
+    backgroundColor: theme.purple + '20',
     borderRadius: 20,
   },
   input: {
     flex: 1,
     ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceLight,
+    color: theme.text,
+    backgroundColor: theme.cardBackground,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 100,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   sendButton: {
     padding: 8,
-  },
-  recordingCard: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.purple,
-  },
-  recordingCardContent: {
-    padding: 20,
-    alignItems: 'center',
-    gap: 12,
-  },
-  recordingText: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  stopRecordingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.red,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  stopRecordingText: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  inputIconRecording: {
-    backgroundColor: colors.red + '20',
-    borderRadius: 20,
   },
   listeningContainer: {
     alignItems: 'center',
@@ -415,7 +387,7 @@ const styles = StyleSheet.create({
   },
   listeningText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
   },
 });
