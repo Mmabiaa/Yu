@@ -10,12 +10,14 @@ import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
 import YuVisionScreen from './src/screens/YuVisionScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import TranslateScreen from './src/screens/TranslateScreen';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
     <SafeAreaProvider>
+       <ThemeProvider>
       <NavigationContainer>
         <StatusBar style="light" />
         <Stack.Navigator
@@ -52,6 +54,7 @@ export default function App() {
           <Stack.Screen name="Translate" component={TranslateScreen} />
         </Stack.Navigator>
       </NavigationContainer>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

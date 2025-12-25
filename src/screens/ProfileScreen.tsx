@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import YuOrb from '../components/YuOrb';
 
 const personalities = [
@@ -27,17 +29,19 @@ const presenceLevels = [
   { id: 'off', title: 'Off', subtitle: 'Complete privacy' },
 ];
 
-const settings = [
-  { id: 'notifications', title: 'Notifications', subtitle: 'Manage alerts', icon: 'notifications-outline', color: '#60A5FA' },
-  { id: 'privacy', title: 'Privacy', subtitle: 'Data controls', icon: 'lock-closed-outline', color: colors.purple },
-  { id: 'voice', title: 'Voice & Sound', subtitle: 'Audio preferences', icon: 'volume-high-outline', color: colors.green },
-  { id: 'help', title: 'Help & Support', subtitle: 'Get assistance', icon: 'help-circle-outline', color: colors.orange },
-];
-
 export default function ProfileScreen({ navigation }: any) {
+  const { theme, isDark, toggleTheme } = useTheme();
   const [selectedPersonality, setSelectedPersonality] = useState('friend');
   const [selectedPresence, setSelectedPresence] = useState('full');
   const [userName, setUserName] = useState('');
+
+  const settings = [
+    { id: 'theme', title: 'Theme', subtitle: isDark ? 'Dark mode' : 'Light mode', icon: 'color-palette-outline', color: theme.purple },
+    { id: 'notifications', title: 'Notifications', subtitle: 'Manage alerts', icon: 'notifications-outline', color: '#60A5FA' },
+    { id: 'privacy', title: 'Privacy', subtitle: 'Data controls', icon: 'lock-closed-outline', color: theme.purple },
+    { id: 'voice', title: 'Voice & Sound', subtitle: 'Audio preferences', icon: 'volume-high-outline', color: theme.green },
+    { id: 'help', title: 'Help & Support', subtitle: 'Get assistance', icon: 'help-circle-outline', color: theme.orange },
+  ];
 
   const handleSaveName = () => {
     if (userName.trim()) {
@@ -47,11 +51,13 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={{ width: 24 }} />
@@ -75,11 +81,11 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>YOUR NAME</Text>
           <View style={styles.nameInput}>
-            <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.nameInputIcon} />
+            <Ionicons name="person-outline" size={20} color={theme.textSecondary} style={styles.nameInputIcon} />
             <TextInput
               style={styles.nameInputText}
               placeholder="Enter your name"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={theme.textSecondary}
               value={userName}
               onChangeText={setUserName}
             />
@@ -104,7 +110,7 @@ export default function ProfileScreen({ navigation }: any) {
               >
                 {selectedPersonality === personality.id && (
                   <View style={styles.checkmarkContainer}>
-                    <Ionicons name="checkmark" size={16} color={colors.text} />
+                    <Ionicons name="checkmark" size={16} color={theme.text} />
                   </View>
                 )}
                 <Text style={[
@@ -141,7 +147,7 @@ export default function ProfileScreen({ navigation }: any) {
                 <Text style={styles.presenceSubtitle}>{level.subtitle}</Text>
               </View>
               {selectedPresence === level.id && (
-                <Ionicons name="checkmark" size={20} color={colors.text} />
+                <Ionicons name="checkmark" size={20} color={theme.text} />
               )}
             </TouchableOpacity>
           ))}
@@ -155,7 +161,10 @@ export default function ProfileScreen({ navigation }: any) {
               key={setting.id}
               style={styles.settingOption}
               onPress={() => {
-                if (setting.id === 'notifications') {
+                if (setting.id === 'theme') {
+                  // Theme toggle is handled by the switch
+                  return;
+                } else if (setting.id === 'notifications') {
                   Alert.alert('Notifications', 'Manage your alert preferences here');
                 } else if (setting.id === 'privacy') {
                   Alert.alert('Privacy', 'Control your data and privacy settings');
@@ -165,6 +174,7 @@ export default function ProfileScreen({ navigation }: any) {
                   Alert.alert('Help & Support', 'Get assistance and access support resources');
                 }
               }}
+              activeOpacity={setting.id === 'theme' ? 1 : 0.7}
             >
               <View style={[styles.settingIconContainer, { borderColor: setting.color }]}>
                 <Ionicons name={setting.icon as any} size={20} color={setting.color} />
@@ -173,7 +183,16 @@ export default function ProfileScreen({ navigation }: any) {
                 <Text style={styles.settingTitle}>{setting.title}</Text>
                 <Text style={styles.settingSubtitle}>{setting.subtitle}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              {setting.id === 'theme' ? (
+                <Switch
+                  value={isDark}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: '#D1D5DB', true: theme.purple }}
+                  thumbColor={isDark ? '#FFFFFF' : '#FFFFFF'}
+                />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -188,10 +207,10 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -202,7 +221,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...typography.h2,
-    color: colors.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   scrollView: {
@@ -218,13 +237,13 @@ const styles = StyleSheet.create({
   },
   nameHeading: {
     ...typography.h1,
-    color: colors.text,
+    color: theme.text,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   nameSubtitle: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   section: {
     paddingHorizontal: 20,
@@ -232,7 +251,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...typography.label,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 12,
     fontSize: 12,
     letterSpacing: 0.5,
@@ -240,11 +259,11 @@ const styles = StyleSheet.create({
   nameInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1C1C2E',
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A3E',
+    borderColor: theme.cardBorder,
   },
   nameInputIcon: {
     marginRight: 12,
@@ -252,17 +271,17 @@ const styles = StyleSheet.create({
   nameInputText: {
     flex: 1,
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
   },
   saveButton: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: theme.purple,
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,
     marginLeft: 8,
   },
   saveButtonText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -273,18 +292,18 @@ const styles = StyleSheet.create({
   },
   personalityOption: {
     width: '47%',
-    backgroundColor: '#1C1C2E',
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     position: 'relative',
     minHeight: 100,
     justifyContent: 'flex-start',
     borderWidth: 1,
-    borderColor: '#2A2A3E',
+    borderColor: theme.cardBorder,
   },
   personalityOptionSelected: {
-    backgroundColor: '#2D1B69',
-    borderColor: '#8B5CF6',
+    backgroundColor: theme.selectedCardBackground,
+    borderColor: theme.selectedCardBorder,
   },
   checkmarkContainer: {
     position: 'absolute',
@@ -293,66 +312,66 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   personalityTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
     marginBottom: 4,
     marginTop: 4,
   },
   personalityTitleSelected: {
-    color: colors.text,
+    color: theme.text,
   },
   personalitySubtitle: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     fontSize: 12,
   },
   personalitySubtitleSelected: {
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   presenceOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1C1C2E',
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A3E',
+    borderColor: theme.cardBorder,
   },
   presenceOptionSelected: {
-    backgroundColor: '#2D1B69',
-    borderColor: '#8B5CF6',
+    backgroundColor: theme.selectedCardBackground,
+    borderColor: theme.selectedCardBorder,
   },
   presenceContent: {
     flex: 1,
   },
   presenceTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
     marginBottom: 4,
   },
   presenceSubtitle: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   settingOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1C1C2E',
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#2A2A3E',
+    borderColor: theme.cardBorder,
   },
   settingIconContainer: {
     width: 40,
@@ -367,13 +386,13 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
     marginBottom: 4,
   },
   settingSubtitle: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   footer: {
     alignItems: 'center',
@@ -382,12 +401,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   footerTagline: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
     fontStyle: 'italic',
   },
 });
