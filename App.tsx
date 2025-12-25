@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
-import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
 import YuVisionScreen from './src/screens/YuVisionScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import TranslateScreen from './src/screens/TranslateScreen';
@@ -48,7 +47,6 @@ export default function App() {
               },
             }}
           />
-          <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
           <Stack.Screen name="YuVision" component={YuVisionScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Translate" component={TranslateScreen} />
