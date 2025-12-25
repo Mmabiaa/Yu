@@ -27,6 +27,7 @@ const mockResponses: { [key: string]: string } = {
 export default function HomeScreen({ navigation }: any) {
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState('');
+  
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -96,12 +97,16 @@ export default function HomeScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <YuOrb 
-          onTap={handleOrbTap}
-          onDoubleTap={() => navigation.navigate('YuVision')}
-          onHold={handleOrbLongPress}
-          listening={isListening}
-        />
+        {/* Only show orb when NOT listening */}
+        {!isListening && (
+          <YuOrb 
+            onTap={handleOrbTap}
+            onDoubleTap={() => navigation.navigate('YuVision')}
+            onHold={handleOrbLongPress}
+            listening={isListening}
+          />
+        )}
+        
         {isListening ? (
           <>
             <View style={styles.visualizationContainer}>
@@ -299,7 +304,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   visualizationContainer: {
-    marginVertical: 20,
+    marginTop: 60,
+    marginBottom: 20,
   },
   listeningText: {
     ...typography.bodySmall,
@@ -320,4 +326,3 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
-
