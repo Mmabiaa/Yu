@@ -14,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { speak } from '../utils/speech';
 import * as Clipboard from 'expo-clipboard';
 import AudioVisualization from '../components/AudioVisualization';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -40,6 +41,7 @@ const mockTranslations: { [key: string]: string } = {
 };
 
 export default function TranslateScreen({ navigation }: any) {
+  const { theme } = useTheme();
   const [fromLang, setFromLang] = useState(languages[0]);
   const [toLang, setToLang] = useState(languages[1]);
   const [inputText, setInputText] = useState('');
@@ -145,14 +147,16 @@ export default function TranslateScreen({ navigation }: any) {
     setOutputText(tempText);
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Ionicons name="language-outline" size={20} color={colors.green} />
+          <Ionicons name="language-outline" size={20} color={theme.green} />
           <Text style={styles.headerTitle}>Yu Translate</Text>
         </View>
         <View style={{ width: 24 }} />
@@ -181,7 +185,7 @@ export default function TranslateScreen({ navigation }: any) {
           </View>
           
           <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
-            <Ionicons name="swap-vertical" size={24} color={colors.text} />
+            <Ionicons name="swap-vertical" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           
           <View style={styles.languageButtonWrapper} ref={toButtonRef}>
@@ -203,7 +207,7 @@ export default function TranslateScreen({ navigation }: any) {
 
         <View style={styles.inputSection}>
           <View style={styles.inputHeader}>
-            <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
+            <Ionicons name="globe-outline" size={16} color={theme.textSecondary} />
             <Text style={styles.inputHeaderText}>{fromLang.name}</Text>
           </View>
           
@@ -211,7 +215,7 @@ export default function TranslateScreen({ navigation }: any) {
             <TextInput
               style={styles.input}
               placeholder="Enter text to translate..."
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={theme.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -224,7 +228,7 @@ export default function TranslateScreen({ navigation }: any) {
                 <Ionicons 
                   name={isRecording ? "mic" : "mic-outline"} 
                   size={24} 
-                  color={isRecording ? colors.green : colors.textSecondary} 
+                  color={isRecording ? theme.green : theme.textSecondary} 
                 />
               </TouchableOpacity>
               {inputText ? (
@@ -235,7 +239,7 @@ export default function TranslateScreen({ navigation }: any) {
                   <Ionicons 
                     name="volume-high-outline" 
                     size={24} 
-                    color={colors.textSecondary} 
+                    color={theme.textSecondary} 
                   />
                 </TouchableOpacity>
               ) : null}
@@ -257,17 +261,17 @@ export default function TranslateScreen({ navigation }: any) {
         {outputText ? (
           <View style={styles.outputSection}>
             <View style={styles.outputHeader}>
-              <Ionicons name="globe-outline" size={16} color={colors.green} />
+              <Ionicons name="globe-outline" size={16} color={theme.green} />
               <Text style={styles.outputHeaderText}>{toLang.name}</Text>
             </View>
             <View style={styles.outputContainer}>
               <Text style={styles.outputText}>{outputText}</Text>
               <View style={styles.outputIcons}>
                 <TouchableOpacity style={styles.iconButton} onPress={handleSpeakOutput}>
-                  <Ionicons name="volume-high-outline" size={24} color={colors.green} />
+                  <Ionicons name="volume-high-outline" size={24} color={theme.green} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.iconButton} onPress={handleCopy}>
-                  <Ionicons name="copy-outline" size={24} color={colors.green} />
+                  <Ionicons name="copy-outline" size={24} color={theme.green} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -323,7 +327,7 @@ export default function TranslateScreen({ navigation }: any) {
                 <Text style={styles.flag}>{lang.flag}</Text>
                 <Text style={styles.dropdownText}>{lang.name}</Text>
                 {fromLang.code === lang.code && (
-                  <Ionicons name="checkmark" size={16} color={colors.text} />
+                  <Ionicons name="checkmark" size={16} color={theme.text} />
                 )}
               </TouchableOpacity>
             ))}
@@ -364,7 +368,7 @@ export default function TranslateScreen({ navigation }: any) {
                 <Text style={styles.flag}>{lang.flag}</Text>
                 <Text style={styles.dropdownText}>{lang.name}</Text>
                 {toLang.code === lang.code && (
-                  <Ionicons name="checkmark" size={16} color={colors.text} />
+                  <Ionicons name="checkmark" size={16} color={theme.text} />
                 )}
               </TouchableOpacity>
             ))}
@@ -375,10 +379,10 @@ export default function TranslateScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -394,7 +398,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...typography.h3,
-    color: colors.text,
+    color: theme.text,
   },
   scrollView: {
     flex: 1,
@@ -418,24 +422,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     padding: 16,
     borderRadius: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   flag: {
     fontSize: 24,
   },
   languageText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
   },
   swapButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.green,
+    backgroundColor: theme.green,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -451,17 +457,19 @@ const styles = StyleSheet.create({
   },
   inputHeaderText: {
     ...typography.bodySmall,
-    color: colors.textSecondary,
+    color: theme.textSecondary,
   },
   inputContainer: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     minHeight: 120,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   input: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     minHeight: 80,
     fontSize: 18,
     marginBottom: 8,
@@ -477,7 +485,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   micButtonRecording: {
-    backgroundColor: colors.green + '30',
+    backgroundColor: theme.green + '30',
   },
   speakerButton: {
     padding: 8,
@@ -489,11 +497,11 @@ const styles = StyleSheet.create({
   },
   listeningText: {
     ...typography.body,
-    color: colors.green,
+    color: theme.green,
     fontWeight: '600',
   },
   translateButton: {
-    backgroundColor: colors.green,
+    backgroundColor: theme.green,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -501,7 +509,7 @@ const styles = StyleSheet.create({
   },
   translateButtonText: {
     ...typography.body,
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   outputSection: {
@@ -516,19 +524,19 @@ const styles = StyleSheet.create({
   },
   outputHeaderText: {
     ...typography.bodySmall,
-    color: colors.green,
+    color: theme.green,
   },
   outputContainer: {
-    backgroundColor: 'rgba(21, 87, 36, 0.3)',
+    backgroundColor: theme.green + '20',
     borderRadius: 12,
     padding: 16,
     minHeight: 80,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: theme.green + '40',
   },
   outputText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontSize: 18,
     marginBottom: 12,
   },
@@ -539,7 +547,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8,
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: theme.green + '30',
     borderRadius: 24,
   },
   quickPhrasesSection: {
@@ -547,7 +555,7 @@ const styles = StyleSheet.create({
   },
   quickPhrasesTitle: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -557,14 +565,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   phraseButton: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   phraseText: {
     ...typography.bodySmall,
-    color: colors.text,
+    color: theme.text,
   },
   modalOverlay: {
     flex: 1,
@@ -573,7 +583,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdown: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 4,
     shadowColor: '#000',
@@ -581,6 +591,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -591,11 +603,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dropdownItemSelected: {
-    backgroundColor: colors.purple,
+    backgroundColor: theme.selectedCardBackground,
+    borderColor: theme.selectedCardBorder,
   },
   dropdownText: {
     ...typography.body,
-    color: colors.text,
+    color: theme.text,
     fontWeight: '600',
   },
 });
