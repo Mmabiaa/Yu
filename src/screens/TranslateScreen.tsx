@@ -47,6 +47,7 @@ export default function TranslateScreen({ navigation }: any) {
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const fromButtonRef = useRef<View | null>(null);
   const toButtonRef = useRef<View | null>(null);
   const [fromButtonLayout, setFromButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -64,6 +65,7 @@ export default function TranslateScreen({ navigation }: any) {
     if (isRecording) {
       // Stop recording and process speech-to-text
       setIsRecording(false);
+      setIsListening(false);
       // Mock: simulate speech-to-text result
       const mockTranscription = 'Hello';
       setInputText(mockTranscription);
@@ -74,9 +76,11 @@ export default function TranslateScreen({ navigation }: any) {
     } else {
       // Start recording
       setIsRecording(true);
+      setIsListening(true);
       // Mock recording - stop after 3 seconds and process speech-to-text
       setTimeout(() => {
         setIsRecording(false);
+        setIsListening(false);
         const mockTranscription = 'Hello';
         setInputText(mockTranscription);
         // Auto-translate after getting the text
@@ -84,6 +88,22 @@ export default function TranslateScreen({ navigation }: any) {
           handleTranslate();
         }, 100);
       }, 3000);
+    }
+  };
+
+  const handleSpeakInput = () => {
+    if (inputText) {
+      const langMap: { [key: string]: string } = {
+        'es': 'es',
+        'fr': 'fr',
+        'de': 'de',
+        'en': 'en',
+      };
+      speak(inputText, {
+        language: langMap[fromLang.code] || 'en',
+        pitch: 1.0,
+        rate: 0.9,
+      });
     }
   };
 
@@ -107,18 +127,6 @@ export default function TranslateScreen({ navigation }: any) {
     if (outputText) {
       await Clipboard.setStringAsync(outputText);
       Alert.alert('Copied', 'Text copied to clipboard');
-      // Also speak the text as requested
-      const langMap: { [key: string]: string } = {
-        'es': 'es',
-        'fr': 'fr',
-        'de': 'de',
-        'en': 'en',
-      };
-      speak(outputText, {
-        language: langMap[toLang.code] || 'en',
-        pitch: 1.0,
-        rate: 0.9,
-      });
     }
   };
 
@@ -158,7 +166,7 @@ export default function TranslateScreen({ navigation }: any) {
         <View style={styles.languageSelector}>
           <View style={styles.languageButtonWrapper} ref={fromButtonRef}>
             <TouchableOpacity 
-              style={[styles.languageButton, fromLang.code === 'en' && styles.languageButtonSelected]}
+              style={styles.languageButton}
               onPress={() => {
                 fromButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
                   setFromButtonLayout({ x: pageX, y: pageY + height, width, height });
@@ -169,9 +177,6 @@ export default function TranslateScreen({ navigation }: any) {
             >
               <Text style={styles.flag}>{fromLang.flag}</Text>
               <Text style={styles.languageText}>{fromLang.name}</Text>
-              {fromLang.code === 'en' && (
-                <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
-              )}
             </TouchableOpacity>
           </View>
           
@@ -181,7 +186,7 @@ export default function TranslateScreen({ navigation }: any) {
           
           <View style={styles.languageButtonWrapper} ref={toButtonRef}>
             <TouchableOpacity 
-              style={[styles.languageButton, toLang.code === 'es' && styles.languageButtonSelected]}
+              style={styles.languageButton}
               onPress={() => {
                 toButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
                   setToButtonLayout({ x: pageX, y: pageY + height, width, height });
@@ -192,9 +197,6 @@ export default function TranslateScreen({ navigation }: any) {
             >
               <Text style={styles.flag}>{toLang.flag}</Text>
               <Text style={styles.languageText}>{toLang.name}</Text>
-              {toLang.code === 'es' && (
-                <Ionicons name="checkmark" size={16} color={colors.text} style={{ marginLeft: 8 }} />
-              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -204,45 +206,49 @@ export default function TranslateScreen({ navigation }: any) {
             <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.inputHeaderText}>{fromLang.name}</Text>
           </View>
-          {isRecording ? (
-            <View style={styles.recordingCard}>
-              <View style={styles.recordingCardContent}>
-                <AudioVisualization isActive={true} />
-                <Text style={styles.recordingText}>Recording...</Text>
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter text to translate..."
+              placeholderTextColor={colors.textSecondary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+            />
+            <View style={styles.inputIconsRow}>
+              <TouchableOpacity 
+                style={[styles.micButton, isRecording && styles.micButtonRecording]}
+                onPress={handleRecordAudio}
+              >
+                <Ionicons 
+                  name={isRecording ? "mic" : "mic-outline"} 
+                  size={24} 
+                  color={isRecording ? colors.green : colors.textSecondary} 
+                />
+              </TouchableOpacity>
+              {inputText ? (
                 <TouchableOpacity 
-                  style={styles.stopRecordingButton}
-                  onPress={handleRecordAudio}
-                >
-                  <Ionicons name="stop" size={20} color={colors.text} />
-                  <Text style={styles.stopRecordingText}>Stop</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter text to translate..."
-                placeholderTextColor={colors.textSecondary}
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-              />
-              <View style={styles.inputIcons}>
-                <TouchableOpacity 
-                  style={[styles.micButton, isRecording && styles.micButtonRecording]}
-                  onPress={handleRecordAudio}
+                  style={styles.speakerButton}
+                  onPress={handleSpeakInput}
                 >
                   <Ionicons 
-                    name={isRecording ? "mic" : "mic-outline"} 
-                    size={20} 
-                    color={isRecording ? colors.red : colors.textSecondary} 
+                    name="volume-high-outline" 
+                    size={24} 
+                    color={colors.textSecondary} 
                   />
                 </TouchableOpacity>
-              </View>
+              ) : null}
             </View>
-          )}
+          </View>
         </View>
+
+        {isListening && (
+          <View style={styles.listeningSection}>
+            <AudioVisualization isActive={true} />
+            <Text style={styles.listeningText}>Listening...</Text>
+          </View>
+        )}
 
         <TouchableOpacity style={styles.translateButton} onPress={handleTranslate}>
           <Text style={styles.translateButtonText}>Translate</Text>
@@ -250,18 +256,18 @@ export default function TranslateScreen({ navigation }: any) {
 
         {outputText ? (
           <View style={styles.outputSection}>
-            <View style={styles.inputHeader}>
-              <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.inputHeaderText}>{toLang.name}</Text>
+            <View style={styles.outputHeader}>
+              <Ionicons name="globe-outline" size={16} color={colors.green} />
+              <Text style={styles.outputHeaderText}>{toLang.name}</Text>
             </View>
             <View style={styles.outputContainer}>
               <Text style={styles.outputText}>{outputText}</Text>
               <View style={styles.outputIcons}>
                 <TouchableOpacity style={styles.iconButton} onPress={handleSpeakOutput}>
-                  <Ionicons name="volume-high-outline" size={20} color={colors.textSecondary} />
+                  <Ionicons name="volume-high-outline" size={24} color={colors.green} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.iconButton} onPress={handleCopy}>
-                  <Ionicons name="copy-outline" size={20} color={colors.textSecondary} />
+                  <Ionicons name="copy-outline" size={24} color={colors.green} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -300,7 +306,7 @@ export default function TranslateScreen({ navigation }: any) {
             position: 'absolute',
             top: fromButtonLayout.y,
             left: fromButtonLayout.x,
-            width: fromButtonLayout.width || 150,
+            width: fromButtonLayout.width,
           }]}>
             {languages.map((lang) => (
               <TouchableOpacity
@@ -341,7 +347,7 @@ export default function TranslateScreen({ navigation }: any) {
             position: 'absolute',
             top: toButtonLayout.y,
             left: toButtonLayout.x,
-            width: toButtonLayout.width || 150,
+            width: toButtonLayout.width,
           }]}>
             {languages.map((lang) => (
               <TouchableOpacity
@@ -417,9 +423,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
-  languageButtonSelected: {
-    backgroundColor: colors.purple,
-  },
   flag: {
     fontSize: 24,
   },
@@ -455,23 +458,39 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     minHeight: 120,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
   },
   input: {
-    flex: 1,
     ...typography.body,
     color: colors.text,
     minHeight: 80,
+    fontSize: 18,
+    marginBottom: 8,
   },
-  inputIcons: {
+  inputIconsRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
   },
   micButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 24,
+  },
+  micButtonRecording: {
+    backgroundColor: colors.green + '30',
+  },
+  speakerButton: {
+    padding: 8,
+  },
+  listeningSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  listeningText: {
+    ...typography.body,
+    color: colors.green,
+    fontWeight: '600',
   },
   translateButton: {
     backgroundColor: colors.green,
@@ -488,26 +507,40 @@ const styles = StyleSheet.create({
   outputSection: {
     marginBottom: 24,
   },
+  outputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  outputHeaderText: {
+    ...typography.bodySmall,
+    color: colors.green,
+  },
   outputContainer: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: 'rgba(21, 87, 36, 0.3)',
     borderRadius: 12,
     padding: 16,
     minHeight: 80,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
   },
   outputText: {
-    flex: 1,
     ...typography.body,
     color: colors.text,
+    fontSize: 18,
+    marginBottom: 12,
   },
   outputIcons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
+    justifyContent: 'flex-end',
   },
   iconButton: {
-    padding: 4,
+    padding: 8,
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: 24,
   },
   quickPhrasesSection: {
     gap: 12,
@@ -542,61 +575,25 @@ const styles = StyleSheet.create({
   dropdown: {
     backgroundColor: colors.surfaceLight,
     borderRadius: 12,
-    padding: 8,
-    minWidth: 200,
+    padding: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
-  micButtonRecording: {
-    backgroundColor: colors.red + '20',
-    borderRadius: 20,
-  },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    gap: 12,
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   dropdownItemSelected: {
     backgroundColor: colors.purple,
   },
   dropdownText: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-  },
-  recordingCard: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.purple,
-    marginTop: 8,
-  },
-  recordingCardContent: {
-    padding: 20,
-    alignItems: 'center',
-    gap: 12,
-  },
-  recordingText: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  stopRecordingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.red,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  stopRecordingText: {
     ...typography.body,
     color: colors.text,
     fontWeight: '600',
