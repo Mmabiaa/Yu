@@ -4,9 +4,6 @@
 
 **Yu: Your Virtual Clone Assistant** is a React Native mobile application that serves as a personal AI assistant with capabilities in vision, voice, translation, and device control.
 
-<br> <br>
-![](./demo/demo.gif)
-
 ## Table of Contents
 
 1. [Getting Started](#getting-started)

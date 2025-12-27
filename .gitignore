@@ -10,10 +10,10 @@ npm-debug.*
 *.log
 .DS_Store
 *.pem
-
+backend/
 # local env files
 .env*.local
 .env
-
+task.md
 # typescript
 *.tsbuildinfo
