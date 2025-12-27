@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { speak } from '../utils/speech';
-import AudioVisualization from '../components/AudioVisualization';
+import { getVoiceIntegration } from '../services/voice/VoiceIntegration';
+import { AudioVisualizer } from '../components/AudioVisualizer';
 import ConversationList from '../components/ConversationList';
 import MessageSearch from '../components/MessageSearch';
 import ConversationExport from '../components/ConversationExport';
@@ -46,6 +46,7 @@ export default function ChatScreen({ navigation }: any) {
   
   const scrollViewRef = useRef<ScrollView>(null);
   const serviceManager = ServiceManager.getInstance();
+  const voiceIntegration = getVoiceIntegration();
 
   // Typing indicator animation
   const TypingIndicator = () => {
@@ -166,7 +167,7 @@ export default function ChatScreen({ navigation }: any) {
     }
   };
 
-  const handleStreamResponse = (response: StreamResponse) => {
+  const handleStreamResponse = async (response: StreamResponse) => {
     switch (response.type) {
       case 'message_start':
         setIsStreaming(true);
@@ -195,11 +196,11 @@ export default function ChatScreen({ navigation }: any) {
 
         // Speak the response if it came from voice input
         if (shouldSpeak) {
-          speak(response.data.content, {
-            language: 'en',
-            pitch: 1.0,
-            rate: 0.9,
-          });
+          try {
+            await voiceIntegration.synthesizeAndPlay(response.data.content);
+          } catch (error) {
+            console.error('Speech synthesis error:', error);
+          }
           setShouldSpeak(false);
         }
         break;
@@ -285,11 +286,11 @@ export default function ChatScreen({ navigation }: any) {
 
         // Speak the response if it came from voice input
         if (currentShouldSpeak) {
-          speak(response.message.content, {
-            language: 'en',
-            pitch: 1.0,
-            rate: 0.9,
-          });
+          try {
+            await voiceIntegration.synthesizeAndPlay(response.message.content);
+          } catch (error) {
+            console.error('Speech synthesis error:', error);
+          }
         }
       }
     } catch (error) {
@@ -300,29 +301,57 @@ export default function ChatScreen({ navigation }: any) {
     }
   };
 
-  const handleRecord = () => {
+  const handleRecord = async () => {
     if (isRecording) {
       // Stop recording and process speech-to-text
-      setIsRecording(false);
-      setIsListening(true);
+      try {
+        setIsRecording(false);
+        setIsListening(true);
 
-      // Mock: simulate speech-to-text result
-      setTimeout(() => {
+        const result = await voiceIntegration.recordAndTranscribe(
+          { format: 'mp3', quality: 'medium' },
+          5000 // 5 seconds max
+        );
+
         setIsListening(false);
-        const mockTranscription = 'What can you help me with?';
-        setMessage(mockTranscription);
-        setShouldSpeak(true);
-      }, 1500);
+        
+        if (result.text.trim()) {
+          setMessage(result.text);
+          setShouldSpeak(true);
+        } else {
+          Alert.alert('Voice Input', 'No speech detected. Please try again.');
+        }
+      } catch (error) {
+        console.error('Voice recording error:', error);
+        setIsRecording(false);
+        setIsListening(false);
+        
+        Alert.alert(
+          'Voice Error',
+          'Failed to record or transcribe audio. Please check your microphone permissions.',
+          [{ text: 'OK' }]
+        );
+      }
     } else {
       // Start recording
-      setIsRecording(true);
+      try {
+        await voiceIntegration.initialize();
+        setIsRecording(true);
 
-      // Auto-stop after 3 seconds for demo purposes
-      setTimeout(() => {
-        if (isRecording) {
-          handleRecord(); // Stop recording
-        }
-      }, 3000);
+        // Auto-stop after 5 seconds for safety
+        setTimeout(() => {
+          if (voiceIntegration.isRecording()) {
+            handleRecord(); // Stop recording
+          }
+        }, 5000);
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        Alert.alert(
+          'Voice Error',
+          'Failed to start recording. Please check your microphone permissions.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -584,14 +613,25 @@ export default function ChatScreen({ navigation }: any) {
 
         {isListening && (
           <View style={styles.listeningContainer}>
-            <AudioVisualization isActive={true} />
-            <Text style={styles.listeningText}>Listening...</Text>
+            <AudioVisualizer 
+              isRecording={false}
+              isPlaying={false}
+              height={60}
+              barCount={20}
+              barColor={theme.purple}
+            />
+            <Text style={styles.listeningText}>Processing...</Text>
           </View>
         )}
 
         {isRecording && (
           <View style={styles.listeningContainer}>
-            <AudioVisualization isActive={true} />
+            <AudioVisualizer 
+              isRecording={true}
+              height={60}
+              barCount={20}
+              barColor={theme.purple}
+            />
             <Text style={styles.listeningText}>Recording...</Text>
           </View>
         )}

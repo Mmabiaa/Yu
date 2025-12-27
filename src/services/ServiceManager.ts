@@ -5,6 +5,8 @@ import { AuthService } from './auth/AuthService';
 import { AuthServiceFactory } from './auth/AuthServiceFactory';
 import { ChatService } from './chat/ChatService';
 import { ChatServiceFactory } from './chat/ChatServiceFactory';
+import { VoiceService } from './voice/VoiceService';
+import { VoiceServiceFactory } from './voice/VoiceServiceFactory';
 import { CacheManagerFactory } from './core/CacheManagerFactory';
 import { CacheManager } from '../types/cache';
 import { getCurrentConfig } from '../config/environment';
@@ -18,6 +20,7 @@ export class ServiceManager {
   private cacheManager: CacheManager;
   private authService: AuthService;
   private chatService: ChatService;
+  private voiceService: VoiceService;
   private authErrorCallback?: (error: ApiError) => void;
 
   private constructor() {
@@ -54,6 +57,9 @@ export class ServiceManager {
     
     // Initialize chat service
     this.chatService = ChatServiceFactory.getInstance(this.apiClient, this.cacheManager);
+    
+    // Initialize voice service
+    this.voiceService = VoiceServiceFactory.create(this.apiClient, this.cacheManager);
   }
 
   /**
@@ -73,6 +79,7 @@ export class ServiceManager {
     ServiceManager.instance = null;
     AuthServiceFactory.reset();
     ChatServiceFactory.reset();
+    VoiceServiceFactory.reset();
   }
 
   /**
@@ -101,6 +108,13 @@ export class ServiceManager {
    */
   public getChatService(): ChatService {
     return this.chatService;
+  }
+
+  /**
+   * Get voice service instance
+   */
+  public getVoiceService(): VoiceService {
+    return this.voiceService;
   }
 
   /**

@@ -455,4 +455,11 @@ export class ApiClient {
     
     return headers;
   }
+
+  /**
+   * Get the base URL for the API client
+   */
+  public getBaseUrl(): string {
+    return this.config.baseUrl;
+  }
 } 

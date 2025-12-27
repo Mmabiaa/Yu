@@ -169,7 +169,7 @@ export default function ProfileScreen({ navigation }: any) {
                 } else if (setting.id === 'privacy') {
                   Alert.alert('Privacy', 'Control your data and privacy settings');
                 } else if (setting.id === 'voice') {
-                  navigation.navigate('Chat');
+                  navigation.navigate('VoiceSettings');
                 } else if (setting.id === 'help') {
                   Alert.alert('Help & Support', 'Get assistance and access support resources');
                 }

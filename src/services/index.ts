@@ -28,6 +28,9 @@ export { AuthIntegration, getAuthIntegration, resetAuthIntegration } from './aut
 export { ChatService } from './chat/ChatService';
 export { ChatServiceFactory } from './chat/ChatServiceFactory';
 
+// Voice services
+export { VoiceService, VoiceServiceFactory, AudioManager, VoiceSettingsManager, VoiceIntegration, getVoiceIntegration, resetVoiceIntegration } from './voice';
+
 // Service management
 export { ServiceManager } from './ServiceManager';
 

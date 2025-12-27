@@ -6,28 +6,24 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { speak } from '../utils/speech';
+import { getVoiceIntegration } from '../services/voice/VoiceIntegration';
 import YuOrb from '../components/YuOrb';
-import AudioVisualization from '../components/AudioVisualization';
+import { AudioVisualizer } from '../components/AudioVisualizer';
 import { typography } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
-const mockResponses: { [key: string]: string } = {
-  'hello': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'hi': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'hey': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'default': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-};
-
 export default function HomeScreen({ navigation }: any) {
   const { theme } = useTheme();
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const voiceIntegration = getVoiceIntegration();
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -50,28 +46,73 @@ export default function HomeScreen({ navigation }: any) {
     { id: 'control', title: 'Yu-Control', subtitle: 'Master devices', color: theme.red, icon: 'phone-portrait-outline' },
   ];
 
+  // Initialize voice integration
+  useEffect(() => {
+    const initializeVoice = async () => {
+      try {
+        await voiceIntegration.initialize();
+      } catch (error) {
+        console.error('Failed to initialize voice integration:', error);
+      }
+    };
+
+    initializeVoice();
+
+    return () => {
+      // Cleanup on unmount
+      voiceIntegration.cleanup();
+    };
+  }, []);
+
   useEffect(() => {
     if (isListening) {
-      // Auto-stop listening after 3 seconds
-      const timer = setTimeout(() => {
-        setIsListening(false);
-        // Mock response - always use the greeting
-        const mockResponse = "Hey there! I'm Yu, your digital twin. How can I help you today?";
-        setResponse(mockResponse);
-        
-        // Speak the response
-        speak(mockResponse, {
-          language: 'en',
-          pitch: 1.0,
-          rate: 0.9,
-        });
-      }, 3000);
-
-      return () => clearTimeout(timer);
+      handleVoiceRecording();
     }
   }, [isListening]);
 
+  const handleVoiceRecording = async () => {
+    try {
+      setIsProcessing(true);
+      
+      // Record and transcribe audio
+      const result = await voiceIntegration.recordAndTranscribe(
+        { format: 'mp3', quality: 'medium' },
+        3000 // 3 seconds max
+      );
+
+      setIsListening(false);
+      
+      if (result.text.trim()) {
+        // Use transcribed text as response for now
+        // In a real implementation, this would be sent to a chat service
+        const responseText = `I heard: "${result.text}". How can I help you with that?`;
+        setResponse(responseText);
+        
+        // Speak the response
+        await voiceIntegration.synthesizeAndPlay(responseText);
+      } else {
+        setResponse("I didn't catch that. Could you try again?");
+      }
+    } catch (error) {
+      console.error('Voice recording error:', error);
+      setIsListening(false);
+      setResponse("Sorry, I had trouble hearing you. Please try again.");
+      
+      Alert.alert(
+        'Voice Error',
+        'There was an issue with voice recording. Please check your microphone permissions.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleOrbTap = () => {
+    if (isListening || isProcessing) {
+      return; // Prevent multiple taps
+    }
+    
     // Clear previous response and start listening
     setResponse('');
     setIsListening(true);
@@ -113,9 +154,16 @@ export default function HomeScreen({ navigation }: any) {
         {isListening ? (
           <>
             <View style={styles.visualizationContainer}>
-              <AudioVisualization isActive={true} />
+              <AudioVisualizer 
+                isRecording={true}
+                height={80}
+                barCount={25}
+                barColor={theme.purple}
+              />
             </View>
-            <Text style={styles.listeningText}>Listening...</Text>
+            <Text style={styles.listeningText}>
+              {isProcessing ? 'Processing...' : 'Listening...'}
+            </Text>
           </>
         ) : response ? (
           <View style={styles.responseContainer}>
