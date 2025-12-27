@@ -6,6 +6,7 @@ export class ApiClient {
   private config: ApiClientConfig;
   private retryConfig: RetryConfig;
   private tokenManager?: any; // Will be injected later
+  private authErrorCallback?: (error: ApiError) => void;
 
   constructor(config: ApiClientConfig) {
     this.config = config;
@@ -35,6 +36,13 @@ export class ApiClient {
     this.tokenManager = tokenManager;
   }
 
+  /**
+   * Set callback for authentication errors (e.g., redirect to login)
+   */
+  public setAuthErrorCallback(callback: (error: ApiError) => void): void {
+    this.authErrorCallback = callback;
+  }
+
   private setupInterceptors(): void {
     // Request interceptor
     this.axiosInstance.interceptors.request.use(
@@ -42,7 +50,8 @@ export class ApiClient {
         // Add authentication token if available
         const token = await this.getAuthToken();
         if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+          const tokenType = await this.getTokenType();
+          config.headers.Authorization = `${tokenType} ${token}`;
         }
 
         // Add request ID for tracking
@@ -50,6 +59,9 @@ export class ApiClient {
 
         // Add timestamp
         config.headers['X-Request-Time'] = new Date().toISOString();
+
+        // Add API version header
+        config.headers['X-API-Version'] = '1.0';
 
         return config;
       },
@@ -220,6 +232,27 @@ export class ApiClient {
     }
   }
 
+  private async getTokenType(): Promise<string> {
+    if (!this.tokenManager) {
+      return 'Bearer';
+    }
+
+    try {
+      return await this.tokenManager.getTokenType();
+    } catch (error) {
+      console.warn('Failed to get token type:', error);
+      return 'Bearer';
+    }
+  }
+
+  private handleAuthenticationError(error: ApiError): void {
+    console.warn('Authentication error occurred:', error);
+    
+    if (this.authErrorCallback) {
+      this.authErrorCallback(error);
+    }
+  }
+
   private generateRequestId(): string {
     return `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
@@ -240,23 +273,48 @@ export class ApiClient {
   }
 
   private async handleResponseError(error: AxiosError): Promise<never> {
+    const originalRequest = error.config;
+
     // Handle token refresh for 401 errors
-    if (error.response?.status === 401 && this.tokenManager) {
+    if (error.response?.status === 401 && this.tokenManager && originalRequest) {
+      // Avoid infinite retry loops
+      if (originalRequest.headers['X-Retry-Auth']) {
+        console.warn('Authentication retry failed, clearing tokens');
+        await this.tokenManager.clearTokens();
+        this.handleAuthenticationError(this.standardizeError(error));
+        throw this.standardizeError(error);
+      }
+
       try {
-        await this.tokenManager.refreshAccessToken();
-        // Retry the original request
-        const originalRequest = error.config;
-        if (originalRequest) {
-          const token = await this.tokenManager.getAccessToken();
-          if (token) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return this.axiosInstance.request(originalRequest);
-          }
+        console.log('Attempting token refresh for 401 error');
+        const newToken = await this.tokenManager.refreshAccessToken();
+        
+        if (newToken) {
+          // Mark request as retried to avoid infinite loops
+          originalRequest.headers['X-Retry-Auth'] = 'true';
+          
+          // Update authorization header with new token
+          const tokenType = await this.getTokenType();
+          originalRequest.headers.Authorization = `${tokenType} ${newToken}`;
+          
+          // Retry the original request
+          console.log('Retrying request with new token');
+          return this.axiosInstance.request(originalRequest);
         }
       } catch (refreshError) {
-        // Token refresh failed, redirect to login
-        console.warn('Token refresh failed:', refreshError);
+        console.error('Token refresh failed:', refreshError);
+        
+        // Clear tokens if refresh fails
+        await this.tokenManager.clearTokens();
+        
+        // Handle authentication error
+        this.handleAuthenticationError(this.standardizeError(error));
       }
+    }
+
+    // Handle other authentication errors (403, etc.)
+    if (error.response?.status === 403) {
+      this.handleAuthenticationError(this.standardizeError(error));
     }
 
     throw this.standardizeError(error);
@@ -265,11 +323,46 @@ export class ApiClient {
   private standardizeError(error: any): ApiError {
     if (error.response) {
       // Server responded with error status
+      const statusCode = error.response.status;
+      const responseData = error.response.data;
+      
+      // Handle authentication-specific errors
+      if (statusCode === 401) {
+        return {
+          code: responseData?.code || 'AUTHENTICATION_FAILED',
+          message: responseData?.message || 'Authentication failed. Please log in again.',
+          details: responseData?.details,
+          statusCode,
+          timestamp: new Date(),
+        };
+      }
+      
+      if (statusCode === 403) {
+        return {
+          code: responseData?.code || 'ACCESS_FORBIDDEN',
+          message: responseData?.message || 'Access forbidden. You do not have permission to perform this action.',
+          details: responseData?.details,
+          statusCode,
+          timestamp: new Date(),
+        };
+      }
+      
+      if (statusCode === 422) {
+        return {
+          code: responseData?.code || 'VALIDATION_ERROR',
+          message: responseData?.message || 'Validation failed',
+          details: responseData?.details,
+          field: responseData?.field,
+          statusCode,
+          timestamp: new Date(),
+        };
+      }
+
       return {
-        code: error.response.data?.code || `HTTP_${error.response.status}`,
-        message: error.response.data?.message || error.message,
-        details: error.response.data?.details,
-        statusCode: error.response.status,
+        code: responseData?.code || `HTTP_${statusCode}`,
+        message: responseData?.message || error.message || `Request failed with status ${statusCode}`,
+        details: responseData?.details,
+        statusCode,
         timestamp: new Date(),
       };
     } else if (error.request) {
@@ -311,5 +404,55 @@ export class ApiClient {
    */
   public getConfig(): ApiClientConfig {
     return { ...this.config };
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  public async isAuthenticated(): Promise<boolean> {
+    if (!this.tokenManager) {
+      return false;
+    }
+
+    try {
+      const hasTokens = await this.tokenManager.hasValidTokens();
+      if (!hasTokens) {
+        return false;
+      }
+
+      const isExpired = await this.tokenManager.isTokenExpired();
+      return !isExpired;
+    } catch (error) {
+      console.warn('Failed to check authentication status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Clear authentication state
+   */
+  public async clearAuthentication(): Promise<void> {
+    if (this.tokenManager) {
+      try {
+        await this.tokenManager.clearTokens();
+      } catch (error) {
+        console.error('Failed to clear authentication:', error);
+      }
+    }
+  }
+
+  /**
+   * Get authentication headers for manual requests
+   */
+  public async getAuthHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
+    
+    const token = await this.getAuthToken();
+    if (token) {
+      const tokenType = await this.getTokenType();
+      headers.Authorization = `${tokenType} ${token}`;
+    }
+    
+    return headers;
   }
 } 

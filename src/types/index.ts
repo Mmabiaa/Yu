@@ -39,6 +39,7 @@ export type {
     SynthesisResponse,
     Voice,
     VoiceSettings,
+    VoicePreferences,
 } from './voice';
 
 export type {
@@ -58,4 +59,5 @@ export type {
     UserProfile,
     UserPreferences,
     UserStatistics,
+    UserVoicePreferences,
 } from './profile';
