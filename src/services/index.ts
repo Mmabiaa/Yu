@@ -3,6 +3,20 @@ export { ApiClient } from './core/ApiClient';
 export { TokenManager } from './core/TokenManager';
 export { createTokenManager, getTokenManager, resetTokenManager } from './core/TokenManagerFactory';
 
+// Cache services
+export { CacheManagerImpl as CacheManager } from './core/CacheManager';
+export { CacheManagerFactory } from './core/CacheManagerFactory';
+export { MemoryCacheImpl as MemoryCache } from './core/MemoryCache';
+export { PersistentCacheImpl as PersistentCache } from './core/PersistentCache';
+export { CachePolicies } from './core/CachePolicies';
+export { CacheCleanupService, CacheUtils } from './core/CacheCleanupService';
+
+// Offline support services
+export { NetworkMonitorImpl as NetworkMonitor } from './core/NetworkMonitor';
+export { OfflineQueueImpl as OfflineQueue } from './core/OfflineQueue';
+export { SyncManagerImpl as SyncManager } from './core/SyncManager';
+export { OfflineSupportFactory, OfflineUtils } from './core/OfflineSupportFactory';
+
 // Auth services
 export { AuthService } from './auth/AuthService';
 export { AuthServiceFactory } from './auth/AuthServiceFactory';

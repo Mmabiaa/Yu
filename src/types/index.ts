@@ -3,6 +3,9 @@
 // Core API types
 export * from './api';
 
+// Cache and offline types
+export * from './cache';
+
 // Feature-specific types
 export * from './auth';
 export * from './chat';
@@ -19,6 +22,19 @@ export type {
     ValidationResult,
     PaginatedResponse,
 } from './api';
+
+export type {
+    CacheManager,
+    CachePolicy,
+    CacheConfig,
+    CacheStats,
+    NetworkMonitor,
+    NetworkStatus,
+    OfflineQueue,
+    QueuedRequest,
+    SyncManager,
+    SyncResult,
+} from './cache';
 
 export type {
     User,
