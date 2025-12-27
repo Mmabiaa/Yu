@@ -17,3 +17,5 @@ backend/
 task.md
 # typescript
 *.tsbuildinfo
+.kiro/
+.kiro
