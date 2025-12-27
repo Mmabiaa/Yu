@@ -121,13 +121,6 @@ export default function AccountCreatedScreen({ navigation }: any) {
             <Text style={styles.primaryButtonText}>Get Started</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleExploreFeatures}
-          >
-            <Text style={styles.secondaryButtonText}>Explore Features</Text>
-          </TouchableOpacity>
         </Animated.View>
 
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
@@ -156,7 +149,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 40,
+    paddingTop: 5,
   },
   successIconContainer: {
     alignItems: 'center',
