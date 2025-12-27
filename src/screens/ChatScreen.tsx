@@ -9,11 +9,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { speak } from '../utils/speech';
 import AudioVisualization from '../components/AudioVisualization';
+import ConversationList from '../components/ConversationList';
+import MessageSearch from '../components/MessageSearch';
+import ConversationExport from '../components/ConversationExport';
 import { typography } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { ServiceManager } from '../services/ServiceManager';
@@ -30,8 +35,50 @@ export default function ChatScreen({ navigation }: any) {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [isYuTyping, setIsYuTyping] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | 'failed'>('disconnected');
+  
+  // New state for conversation management
+  const [showConversationList, setShowConversationList] = useState(false);
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [showConversationExport, setShowConversationExport] = useState(false);
+  const [showConversationMenu, setShowConversationMenu] = useState(false);
+  
   const scrollViewRef = useRef<ScrollView>(null);
   const serviceManager = ServiceManager.getInstance();
+
+  // Typing indicator animation
+  const TypingIndicator = () => {
+    const dot1 = useRef(new Animated.Value(0.4)).current;
+    const dot2 = useRef(new Animated.Value(0.4)).current;
+    const dot3 = useRef(new Animated.Value(0.4)).current;
+
+    useEffect(() => {
+      const animate = () => {
+        const duration = 600;
+        const sequence = Animated.sequence([
+          Animated.timing(dot1, { toValue: 1, duration: duration / 3, useNativeDriver: false }),
+          Animated.timing(dot2, { toValue: 1, duration: duration / 3, useNativeDriver: false }),
+          Animated.timing(dot3, { toValue: 1, duration: duration / 3, useNativeDriver: false }),
+          Animated.timing(dot1, { toValue: 0.4, duration: duration / 3, useNativeDriver: false }),
+          Animated.timing(dot2, { toValue: 0.4, duration: duration / 3, useNativeDriver: false }),
+          Animated.timing(dot3, { toValue: 0.4, duration: duration / 3, useNativeDriver: false }),
+        ]);
+
+        Animated.loop(sequence).start();
+      };
+
+      animate();
+    }, []);
+
+    return (
+      <View style={styles.typingIndicator}>
+        <Animated.View style={[styles.typingDot, { opacity: dot1 }]} />
+        <Animated.View style={[styles.typingDot, { opacity: dot2 }]} />
+        <Animated.View style={[styles.typingDot, { opacity: dot3 }]} />
+      </View>
+    );
+  };
 
   // Initialize conversation and load messages
   useEffect(() => {
@@ -100,10 +147,12 @@ export default function ChatScreen({ navigation }: any) {
     if (!currentConversation) return;
 
     try {
+      setConnectionStatus('reconnecting');
       const chatService = serviceManager.getChatService();
 
       // Connect to streaming
       await chatService.connectToStream(currentConversation.id);
+      setConnectionStatus('connected');
 
       // Set up stream response handler
       chatService.onStreamResponse((response: StreamResponse) => {
@@ -112,6 +161,7 @@ export default function ChatScreen({ navigation }: any) {
 
     } catch (error) {
       console.error('Failed to setup streaming:', error);
+      setConnectionStatus('failed');
       // Continue without streaming
     }
   };
@@ -121,14 +171,17 @@ export default function ChatScreen({ navigation }: any) {
       case 'message_start':
         setIsStreaming(true);
         setStreamingMessage('');
+        setIsYuTyping(true);
         break;
 
       case 'message_delta':
         setStreamingMessage(prev => prev + (response.data.content || ''));
+        setIsYuTyping(false); // Stop typing indicator when content starts flowing
         break;
 
       case 'message_end':
         setIsStreaming(false);
+        setIsYuTyping(false);
         const completeMessage: Message = {
           id: response.messageId || Date.now().toString(),
           conversationId: response.conversationId,
@@ -151,11 +204,44 @@ export default function ChatScreen({ navigation }: any) {
         }
         break;
 
+      case 'typing_indicator':
+        setIsYuTyping(response.data.isTyping);
+        break;
+
+      case 'connection_status':
+        setConnectionStatus(response.data.status);
+        if (response.data.status === 'failed') {
+          Alert.alert(
+            'Connection Lost', 
+            response.data.message || 'Connection to chat service lost. Please try again.',
+            [
+              { text: 'Retry', onPress: () => retryConnection() },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        }
+        break;
+
       case 'error':
         setIsStreaming(false);
+        setIsYuTyping(false);
         setStreamingMessage('');
         Alert.alert('Error', response.data.error || 'An error occurred while processing your message.');
         break;
+    }
+  };
+
+  const retryConnection = async () => {
+    if (!currentConversation) return;
+
+    try {
+      setConnectionStatus('reconnecting');
+      const chatService = serviceManager.getChatService();
+      await chatService.reconnectStream();
+    } catch (error) {
+      console.error('Failed to retry connection:', error);
+      setConnectionStatus('failed');
+      Alert.alert('Connection Failed', 'Unable to reconnect to chat service. Please try again later.');
     }
   };
 
@@ -240,6 +326,139 @@ export default function ChatScreen({ navigation }: any) {
     }
   };
 
+  // Conversation management functions
+  const handleSelectConversation = async (conversation: Conversation) => {
+    try {
+      setIsLoading(true);
+      setCurrentConversation(conversation);
+      setShowConversationList(false);
+
+      // Load messages for selected conversation
+      const chatService = serviceManager.getChatService();
+      const messageList = await chatService.getConversationMessages(conversation.id, 1, 50);
+      setMessages(messageList.messages);
+
+      // Set up streaming for new conversation
+      if (chatService.isStreamingEnabled()) {
+        setupStreaming();
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      Alert.alert('Error', 'Failed to load conversation. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateNewConversation = async () => {
+    try {
+      setIsLoading(true);
+      setShowConversationList(false);
+
+      const chatService = serviceManager.getChatService();
+      const newConversation = await chatService.createConversation(
+        'New Chat',
+        'helpful',
+        "Hello! I'm Yu, your virtual clone assistant. How can I help you today?"
+      );
+      
+      setCurrentConversation(newConversation);
+      
+      // Add welcome message
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        conversationId: newConversation.id,
+        role: 'assistant',
+        content: "Hello! I'm Yu, your virtual clone assistant. How can I help you today?",
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+
+      // Set up streaming for new conversation
+      if (chatService.isStreamingEnabled()) {
+        setupStreaming();
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      Alert.alert('Error', 'Failed to create new conversation. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRenameConversation = async () => {
+    if (!currentConversation) return;
+
+    Alert.prompt(
+      'Rename Conversation',
+      'Enter a new title for this conversation:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Save',
+          onPress: async (newTitle: string | undefined) => {
+            if (!newTitle?.trim()) return;
+
+            try {
+              const chatService = serviceManager.getChatService();
+              const updatedConversation = await chatService.updateConversationTitle(
+                currentConversation.id,
+                newTitle.trim()
+              );
+              setCurrentConversation(updatedConversation);
+              setShowConversationMenu(false);
+            } catch (error) {
+              console.error('Failed to rename conversation:', error);
+              Alert.alert('Error', 'Failed to rename conversation. Please try again.');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      currentConversation.title
+    );
+  };
+
+  const handleArchiveConversation = async () => {
+    if (!currentConversation) return;
+
+    Alert.alert(
+      'Archive Conversation',
+      'This conversation will be moved to your archived conversations.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          onPress: async () => {
+            try {
+              const chatService = serviceManager.getChatService();
+              await chatService.archiveConversation(currentConversation.id, true);
+              setShowConversationMenu(false);
+              
+              // Navigate back or load a different conversation
+              Alert.alert('Archived', 'Conversation has been archived.', [
+                { text: 'OK', onPress: () => setShowConversationList(true) }
+              ]);
+            } catch (error) {
+              console.error('Failed to archive conversation:', error);
+              Alert.alert('Error', 'Failed to archive conversation. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSelectSearchResult = (message: Message) => {
+    // Scroll to the message in the conversation
+    // For now, we'll just show an alert with the message details
+    Alert.alert(
+      'Message Found',
+      `From: ${message.role === 'user' ? 'You' : 'Yu'}\nTime: ${new Date(message.timestamp).toLocaleString()}\n\n${message.content}`,
+      [{ text: 'OK' }]
+    );
+  };
+
   useEffect(() => {
     // Scroll to bottom when new message is added
     setTimeout(() => {
@@ -252,25 +471,43 @@ export default function ChatScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+        <TouchableOpacity onPress={() => setShowConversationList(true)}>
+          <Ionicons name="chatbubbles-outline" size={24} color={theme.text} />
         </TouchableOpacity>
+        
         <TouchableOpacity
           style={styles.headerCenter}
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => setShowConversationMenu(true)}
           activeOpacity={0.7}
         >
           <View style={styles.avatar}>
             <View style={styles.avatarInner} />
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Yu</Text>
-            <Text style={styles.headerSubtitle}>Online</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {currentConversation?.title || 'Yu'}
+            </Text>
+            <Text style={[
+              styles.headerSubtitle,
+              connectionStatus === 'connected' && styles.headerOnline,
+              connectionStatus === 'reconnecting' && styles.headerReconnecting,
+              connectionStatus === 'failed' && styles.headerOffline
+            ]}>
+              {connectionStatus === 'connected' ? 'Online' : 
+               connectionStatus === 'reconnecting' ? 'Reconnecting...' :
+               connectionStatus === 'failed' ? 'Offline' : 'Connecting...'}
+            </Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('YuVision')}>
-          <Ionicons name="camera-outline" size={24} color={theme.text} />
-        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowMessageSearch(true)}>
+            <Ionicons name="search-outline" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('YuVision')}>
+            <Ionicons name="camera-outline" size={24} color={theme.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -314,6 +551,19 @@ export default function ChatScreen({ navigation }: any) {
               </View>
             </View>
           ))}
+
+          {/* Show typing indicator */}
+          {isYuTyping && !isStreaming && (
+            <View style={styles.messageContainer}>
+              <View style={styles.messageHeader}>
+                <Ionicons name="star" size={16} color={theme.purple} />
+                <Text style={styles.messageSender}>Yu</Text>
+              </View>
+              <View style={styles.messageBubble}>
+                <TypingIndicator />
+              </View>
+            </View>
+          )}
 
           {/* Show streaming message */}
           {isStreaming && streamingMessage && (
@@ -388,6 +638,104 @@ export default function ChatScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Conversation List Modal */}
+      <Modal
+        visible={showConversationList}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowConversationList(false)}
+      >
+        <ConversationList
+          onSelectConversation={handleSelectConversation}
+          selectedConversationId={currentConversation?.id}
+          onCreateNew={handleCreateNewConversation}
+        />
+      </Modal>
+
+      {/* Message Search Modal */}
+      <Modal
+        visible={showMessageSearch}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMessageSearch(false)}
+      >
+        <MessageSearch
+          conversationId={currentConversation?.id}
+          onSelectMessage={handleSelectSearchResult}
+          onClose={() => setShowMessageSearch(false)}
+        />
+      </Modal>
+
+      {/* Conversation Export Modal */}
+      {currentConversation && (
+        <ConversationExport
+          conversation={currentConversation}
+          visible={showConversationExport}
+          onClose={() => setShowConversationExport(false)}
+        />
+      )}
+
+      {/* Conversation Menu Modal */}
+      <Modal
+        visible={showConversationMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConversationMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowConversationMenu(false)}
+        >
+          <View style={styles.conversationMenu}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleRenameConversation}
+            >
+              <Ionicons name="create-outline" size={20} color={theme.text} />
+              <Text style={[styles.menuItemText, { color: theme.text }]}>
+                Rename Conversation
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowConversationMenu(false);
+                setShowConversationExport(true);
+              }}
+            >
+              <Ionicons name="download-outline" size={20} color={theme.text} />
+              <Text style={[styles.menuItemText, { color: theme.text }]}>
+                Export Conversation
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleArchiveConversation}
+            >
+              <Ionicons name="archive-outline" size={20} color={theme.text} />
+              <Text style={[styles.menuItemText, { color: theme.text }]}>
+                Archive Conversation
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuSeparator} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Ionicons name="person-outline" size={20} color={theme.text} />
+              <Text style={[styles.menuItemText, { color: theme.text }]}>
+                Profile Settings
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -413,6 +761,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    marginHorizontal: 16,
   },
   avatar: {
     width: 40,
@@ -431,6 +781,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   headerText: {
     gap: 2,
+    flex: 1,
   },
   headerTitle: {
     ...typography.body,
@@ -440,6 +791,53 @@ const createStyles = (theme: any) => StyleSheet.create({
   headerSubtitle: {
     ...typography.caption,
     color: theme.text,
+  },
+  headerOnline: {
+    color: theme.green || '#4CAF50',
+  },
+  headerReconnecting: {
+    color: theme.orange || '#FF9800',
+  },
+  headerOffline: {
+    color: theme.red || '#F44336',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  conversationMenu: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    minWidth: 250,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  menuItemText: {
+    ...typography.body,
+  },
+  menuSeparator: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginVertical: 4,
   },
   messagesContainer: {
     flex: 1,
@@ -491,6 +889,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   cursor: {
     opacity: 0.7,
     fontWeight: 'bold',
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.textSecondary,
+    opacity: 0.4,
   },
   inputContainer: {
     flexDirection: 'row',

@@ -84,7 +84,7 @@ export interface CreateConversationRequest {
 }
 
 export interface StreamResponse {
-  type: 'message_start' | 'message_delta' | 'message_end' | 'error' | 'typing_indicator' | 'reconnect';
+  type: 'message_start' | 'message_delta' | 'message_end' | 'error' | 'typing_indicator' | 'reconnect' | 'connection_status';
   data: any;
   conversationId: string;
   messageId?: string;

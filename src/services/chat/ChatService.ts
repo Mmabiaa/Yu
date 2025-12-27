@@ -7,7 +7,6 @@ import {
   ChatResponse,
   Conversation,
   ConversationList,
-  Message,
   MessageList,
   CreateConversationRequest,
   StreamResponse,
@@ -16,7 +15,6 @@ import {
   ExportConversationResponse,
   ChatPersonality
 } from '../../types/chat';
-import { ApiResponse } from '../../types/api';
 
 export interface ChatServiceConfig {
   enableStreaming: boolean;
@@ -417,26 +415,36 @@ export class ChatService extends BaseService {
         });
       });
 
-      this.wsManager.on(endpoint, 'close', () => {
-        console.log('WebSocket stream closed');
-        this.wsConnection = null;
-        this.currentConversationId = null;
-      });
-
-      this.wsManager.on(endpoint, 'reconnect', () => {
-        console.log('WebSocket stream reconnected');
-        // Notify listeners about reconnection
-        this.emitStreamResponse({
-          type: 'reconnect',
-          data: { message: 'Stream reconnected' },
-          conversationId
-        });
-      });
+      // Set up reconnection handling
+      this.setupReconnectionHandling(endpoint);
 
       return this.wsConnection;
     } catch (error: any) {
       console.error('Failed to connect to chat stream:', error);
       throw new Error(error.message || 'Failed to connect to chat stream');
+    }
+  }
+
+  /**
+   * Send typing indicator to other participants
+   */
+  public sendTypingIndicator(isTyping: boolean): void {
+    try {
+      if (!this.wsConnection || !this.currentConversationId) {
+        return; // Silently fail if no connection
+      }
+
+      const endpoint = `/chat/stream/${this.currentConversationId}`;
+      
+      this.wsManager.sendMessage(endpoint, 'typing_indicator', {
+        isTyping,
+        conversationId: this.currentConversationId,
+        timestamp: new Date()
+      });
+
+    } catch (error: any) {
+      console.warn('Failed to send typing indicator:', error);
+      // Don't throw error for typing indicators
     }
   }
 
@@ -481,6 +489,9 @@ export class ChatService extends BaseService {
         conversationId: this.currentConversationId
       });
 
+      // Send typing indicator to show Yu is processing
+      this.sendTypingIndicator(true);
+
     } catch (error: any) {
       console.error('Failed to send stream message:', error);
       throw new Error(error.message || 'Failed to send stream message');
@@ -499,7 +510,8 @@ export class ChatService extends BaseService {
    * Remove stream response callback
    */
   public offStreamResponse(callback: (response: StreamResponse) => void): void {
-    for (const [id, cb] of this.streamCallbacks.entries()) {
+    const entries = Array.from(this.streamCallbacks.entries());
+    for (const [id, cb] of entries) {
       if (cb === callback) {
         this.streamCallbacks.delete(id);
         break;
@@ -536,15 +548,95 @@ export class ChatService extends BaseService {
   }
 
   /**
-   * Get current stream status
+   * Get current stream status with detailed connection info
    */
-  public getStreamStatus(): { connected: boolean; conversationId: string | null; status: string } {
+  public getStreamStatus(): { 
+    connected: boolean; 
+    conversationId: string | null; 
+    status: string;
+    reconnectAttempts?: number;
+    lastError?: string;
+  } {
     const endpoint = this.currentConversationId ? `/chat/stream/${this.currentConversationId}` : '';
     return {
       connected: this.isStreamConnected(),
       conversationId: this.currentConversationId,
       status: endpoint ? this.wsManager.getConnectionStatus(endpoint) : 'disconnected'
     };
+  }
+
+  /**
+   * Force reconnect to current stream
+   */
+  public async reconnectStream(): Promise<void> {
+    if (!this.currentConversationId) {
+      throw new Error('No active conversation to reconnect to');
+    }
+
+    const conversationId = this.currentConversationId;
+    this.disconnectStream();
+    await this.connectToStream(conversationId);
+  }
+
+  /**
+   * Set up automatic reconnection handling
+   */
+  private setupReconnectionHandling(endpoint: string): void {
+    this.wsManager.on(endpoint, 'close', (event: CloseEvent) => {
+      console.log('WebSocket stream closed:', event.code, event.reason);
+      
+      // Emit connection status update
+      this.emitStreamResponse({
+        type: 'connection_status',
+        data: { 
+          status: 'disconnected', 
+          reason: event.reason,
+          code: event.code 
+        },
+        conversationId: this.currentConversationId!
+      });
+
+      // Only attempt reconnection for unexpected closures
+      if (event.code !== 1000 && event.code !== 1001) {
+        this.emitStreamResponse({
+          type: 'connection_status',
+          data: { 
+            status: 'reconnecting',
+            message: 'Connection lost, attempting to reconnect...'
+          },
+          conversationId: this.currentConversationId!
+        });
+      }
+    });
+
+    this.wsManager.on(endpoint, 'reconnect', () => {
+      console.log('WebSocket stream reconnected successfully');
+      
+      // Notify listeners about successful reconnection
+      this.emitStreamResponse({
+        type: 'connection_status',
+        data: { 
+          status: 'connected',
+          message: 'Connection restored'
+        },
+        conversationId: this.currentConversationId!
+      });
+    });
+
+    this.wsManager.on(endpoint, 'reconnect_failed', (data: any) => {
+      console.error('WebSocket stream reconnection failed:', data);
+      
+      // Notify listeners about failed reconnection
+      this.emitStreamResponse({
+        type: 'connection_status',
+        data: { 
+          status: 'failed',
+          message: 'Failed to reconnect. Please try again.',
+          attempts: data.attempts
+        },
+        conversationId: this.currentConversationId!
+      });
+    });
   }
 
   /**
@@ -555,6 +647,15 @@ export class ChatService extends BaseService {
       let streamResponse: StreamResponse;
 
       switch (message.type) {
+        case 'message_start':
+          // Yu has started generating a response
+          streamResponse = {
+            type: 'message_start',
+            data: message.data,
+            conversationId: this.currentConversationId!
+          };
+          break;
+
         case 'message_delta':
           streamResponse = {
             type: 'message_delta',
@@ -572,6 +673,9 @@ export class ChatService extends BaseService {
             messageId: message.data.messageId
           };
           
+          // Stop typing indicator when message is complete
+          this.sendTypingIndicator(false);
+          
           // Invalidate cache for this conversation
           this.invalidateCache(`/conversations/${this.currentConversationId}/messages`);
           this.invalidateCache('/conversations');
@@ -588,6 +692,18 @@ export class ChatService extends BaseService {
         case 'error':
           streamResponse = {
             type: 'error',
+            data: message.data,
+            conversationId: this.currentConversationId!
+          };
+          
+          // Stop typing indicator on error
+          this.sendTypingIndicator(false);
+          break;
+
+        case 'connection_status':
+          // Handle connection status updates
+          streamResponse = {
+            type: 'connection_status',
             data: message.data,
             conversationId: this.currentConversationId!
           };
