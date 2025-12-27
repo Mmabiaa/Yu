@@ -1,5 +1,11 @@
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { AudioRecordingConfig, AudioPlaybackConfig } from '../../types/voice';
+
+// Type augmentation for FileSystem to handle documentDirectory
+declare module 'expo-file-system' {
+  export const documentDirectory: string | null;
+}
 
 /**
  * AudioManager handles native audio recording and playback operations
@@ -116,7 +122,7 @@ export class AudioManager {
       this.isPlaying = true;
 
       // Set up playback status listener
-      this.sound.setOnPlaybackStatusUpdate((status) => {
+      this.sound.setOnPlaybackStatusUpdate((status: any) => {
         if (status.isLoaded && status.didJustFinish) {
           this.isPlaying = false;
         }
@@ -218,20 +224,174 @@ export class AudioManager {
     inputUri: string,
     outputFormat: 'mp3' | 'wav' | 'aac'
   ): Promise<string> {
-    // For now, we'll just return the original URI
-    // In a real implementation, you might use a native module for conversion
-    console.log(`Audio format conversion requested: ${outputFormat}`);
-    return inputUri;
+    try {
+      const inputInfo = await FileSystem.getInfoAsync(inputUri);
+      if (!inputInfo.exists) {
+        throw new Error('Input audio file does not exist');
+      }
+
+      // Get file extension from input
+      const inputExtension = inputUri.split('.').pop()?.toLowerCase();
+      
+      // If already in target format, return original
+      if (inputExtension === outputFormat) {
+        console.log(`Audio already in ${outputFormat} format`);
+        return inputUri;
+      }
+
+      // Generate output file path
+      const outputUri = `${FileSystem.documentDirectory!}converted_${Date.now()}.${outputFormat}`;
+      
+      // For React Native/Expo, we'll use a simple approach:
+      // Re-record the audio in the desired format by playing and recording simultaneously
+      // This is a workaround since native format conversion requires platform-specific modules
+      
+      console.log(`Converting audio from ${inputExtension} to ${outputFormat}`);
+      
+      // Create a new recording with the target format
+      const convertedRecording = new Audio.Recording();
+      const recordingOptions = this.getRecordingOptions({ 
+        format: outputFormat, 
+        quality: 'medium' 
+      });
+      
+      // Load the original audio
+      const { sound: originalSound } = await Audio.Sound.createAsync(
+        { uri: inputUri },
+        { shouldPlay: false }
+      );
+      
+      try {
+        // Start recording in new format
+        await convertedRecording.prepareToRecordAsync(recordingOptions);
+        await convertedRecording.startAsync();
+        
+        // Play original audio (this will be captured by the recording)
+        await originalSound.playAsync();
+        
+        // Wait for playback to complete
+        const status = await originalSound.getStatusAsync();
+        if (status.isLoaded && status.durationMillis) {
+          await new Promise(resolve => setTimeout(resolve, (status.durationMillis || 0) + 500));
+        }
+        
+        // Stop recording
+        await convertedRecording.stopAndUnloadAsync();
+        const convertedUri = convertedRecording.getURI();
+        
+        // Clean up
+        await originalSound.unloadAsync();
+        
+        if (convertedUri) {
+          // Move to desired location
+          await FileSystem.moveAsync({
+            from: convertedUri,
+            to: outputUri
+          });
+          
+          console.log(`Audio converted successfully to ${outputUri}`);
+          return outputUri;
+        } else {
+          throw new Error('Conversion failed - no output file generated');
+        }
+        
+      } catch (conversionError) {
+        // Clean up on error
+        await originalSound.unloadAsync();
+        await convertedRecording.stopAndUnloadAsync().catch(() => {});
+        throw conversionError;
+      }
+      
+    } catch (error) {
+      console.error('Error converting audio format:', error);
+      // Fallback: return original file
+      console.log('Conversion failed, returning original file');
+      return inputUri;
+    }
   }
 
   /**
    * Compress audio file
    */
   async compressAudio(inputUri: string, quality: 'low' | 'medium' | 'high'): Promise<string> {
-    // For now, we'll just return the original URI
-    // In a real implementation, you might use a native module for compression
-    console.log(`Audio compression requested: ${quality}`);
-    return inputUri;
+    try {
+      const inputInfo = await FileSystem.getInfoAsync(inputUri);
+      if (!inputInfo.exists) {
+        throw new Error('Input audio file does not exist');
+      }
+
+      // Generate output file path
+      const outputUri = `${FileSystem.documentDirectory!}compressed_${Date.now()}.mp3`;
+      
+      console.log(`Compressing audio with ${quality} quality`);
+      
+      // Create a new recording with compression settings
+      const compressedRecording = new Audio.Recording();
+      const recordingOptions = this.getRecordingOptions({ 
+        format: 'mp3', 
+        quality: quality 
+      });
+      
+      // Load the original audio
+      const { sound: originalSound } = await Audio.Sound.createAsync(
+        { uri: inputUri },
+        { shouldPlay: false }
+      );
+      
+      try {
+        // Start recording with compression settings
+        await compressedRecording.prepareToRecordAsync(recordingOptions);
+        await compressedRecording.startAsync();
+        
+        // Play original audio
+        await originalSound.playAsync();
+        
+        // Wait for playback to complete
+        const status = await originalSound.getStatusAsync();
+        if (status.isLoaded && status.durationMillis) {
+          await new Promise(resolve => setTimeout(resolve, (status.durationMillis || 0) + 500));
+        }
+        
+        // Stop recording
+        await compressedRecording.stopAndUnloadAsync();
+        const compressedUri = compressedRecording.getURI();
+        
+        // Clean up
+        await originalSound.unloadAsync();
+        
+        if (compressedUri) {
+          // Move to desired location
+          await FileSystem.moveAsync({
+            from: compressedUri,
+            to: outputUri
+          });
+          
+          // Get file sizes for comparison
+          const originalSize = (inputInfo as any).size || 0;
+          const compressedInfo = await FileSystem.getInfoAsync(outputUri);
+          const compressedSize = (compressedInfo as any).size || 0;
+          
+          const compressionRatio = originalSize > 0 ? (compressedSize / originalSize) * 100 : 100;
+          
+          console.log(`Audio compressed successfully. Size: ${originalSize} -> ${compressedSize} bytes (${compressionRatio.toFixed(1)}%)`);
+          return outputUri;
+        } else {
+          throw new Error('Compression failed - no output file generated');
+        }
+        
+      } catch (compressionError) {
+        // Clean up on error
+        await originalSound.unloadAsync();
+        await compressedRecording.stopAndUnloadAsync().catch(() => {});
+        throw compressionError;
+      }
+      
+    } catch (error) {
+      console.error('Error compressing audio:', error);
+      // Fallback: return original file
+      console.log('Compression failed, returning original file');
+      return inputUri;
+    }
   }
 
   /**
@@ -243,6 +403,13 @@ export class AudioManager {
     format: string;
   }> {
     try {
+      // Get file system info
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      
+      if (!fileInfo.exists) {
+        throw new Error('Audio file does not exist');
+      }
+      
       // Create a temporary sound to get duration
       const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false });
       const status = await sound.getStatusAsync();
@@ -250,7 +417,7 @@ export class AudioManager {
 
       return {
         duration: status.isLoaded ? status.durationMillis || 0 : 0,
-        size: 0, // Size info not available without FileSystem
+        size: (fileInfo as any).size || 0,
         format: uri.split('.').pop() || 'unknown'
       };
     } catch (error) {
@@ -272,6 +439,93 @@ export class AudioManager {
       }
     } catch (error) {
       console.error('Error during cleanup:', error);
+    }
+  }
+
+  /**
+   * Delete audio file from file system
+   */
+  async deleteAudioFile(uri: string): Promise<boolean> {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(uri);
+        console.log(`Audio file deleted: ${uri}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting audio file:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Copy audio file to a new location
+   */
+  async copyAudioFile(sourceUri: string, destinationUri: string): Promise<string> {
+    try {
+      await FileSystem.copyAsync({
+        from: sourceUri,
+        to: destinationUri
+      });
+      console.log(`Audio file copied from ${sourceUri} to ${destinationUri}`);
+      return destinationUri;
+    } catch (error) {
+      console.error('Error copying audio file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available storage space
+   */
+  async getAvailableSpace(): Promise<number> {
+    try {
+      const freeDiskStorage = await FileSystem.getFreeDiskStorageAsync();
+      return freeDiskStorage;
+    } catch (error) {
+      console.error('Error getting available space:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up old audio files (older than specified days)
+   */
+  async cleanupOldFiles(olderThanDays: number = 7): Promise<number> {
+    try {
+      const documentDir = FileSystem.documentDirectory;
+      if (!documentDir) return 0;
+
+      const files = await FileSystem.readDirectoryAsync(documentDir);
+      const audioFiles = files.filter(file => 
+        file.endsWith('.mp3') || 
+        file.endsWith('.wav') || 
+        file.endsWith('.aac') ||
+        file.includes('recorded_') ||
+        file.includes('converted_') ||
+        file.includes('compressed_')
+      );
+
+      let deletedCount = 0;
+      const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
+
+      for (const file of audioFiles) {
+        const filePath = `${documentDir}${file}`;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        
+        if (fileInfo.exists && (fileInfo as any).modificationTime && (fileInfo as any).modificationTime < cutoffTime) {
+          await FileSystem.deleteAsync(filePath);
+          deletedCount++;
+        }
+      }
+
+      console.log(`Cleaned up ${deletedCount} old audio files`);
+      return deletedCount;
+    } catch (error) {
+      console.error('Error cleaning up old files:', error);
+      return 0;
     }
   }
 

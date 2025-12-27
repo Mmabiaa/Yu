@@ -24,6 +24,7 @@ interface AudioPlayerProps {
   showControls?: boolean;
   autoPlay?: boolean;
   disabled?: boolean;
+  showWaveform?: boolean;
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
@@ -38,6 +39,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   showControls = true,
   autoPlay = false,
   disabled = false,
+  showWaveform = true,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -253,6 +255,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             height={60}
             barCount={25}
             barColor={getPlayButtonColor()}
+            showWaveform={showWaveform}
+            sensitivity={0.8}
           />
         </View>
       )}

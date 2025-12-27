@@ -21,6 +21,9 @@ interface AudioRecorderProps {
   config?: AudioRecordingConfig;
   showVisualizer?: boolean;
   disabled?: boolean;
+  enableCompression?: boolean;
+  compressionQuality?: 'low' | 'medium' | 'high';
+  autoConvertFormat?: 'mp3' | 'wav' | 'aac' | null;
 }
 
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({
@@ -32,10 +35,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   config = { format: 'mp3', quality: 'medium' },
   showVisualizer = true,
   disabled = false,
+  enableCompression = false,
+  compressionQuality = 'medium',
+  autoConvertFormat = null,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const audioManagerRef = useRef<AudioManager | null>(null);
   const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

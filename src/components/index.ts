@@ -5,6 +5,6 @@ export { AudioPlayer } from './AudioPlayer';
 export { VoiceRecorderModal } from './VoiceRecorderModal';
 
 // Chat components
-export { ConversationList } from './ConversationList';
-export { ConversationExport } from './ConversationExport';
-export { MessageSearch } from './MessageSearch';
+export { default as ConversationList } from './ConversationList';
+export { default as ConversationExport } from './ConversationExport';
+export { default as MessageSearch } from './MessageSearch';
