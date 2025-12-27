@@ -5,6 +5,7 @@ export interface AppConfig {
   wsBaseUrl: string;
   authConfig: AuthConfig;
   cacheConfig: CacheConfig;
+  chat?: ChatConfig;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   features: FeatureFlags;
   timeout: number;
@@ -23,6 +24,12 @@ export interface CacheConfig {
   enablePersistent: boolean;
 }
 
+export interface ChatConfig {
+  defaultPersonality: string;
+  maxMessageLength: number;
+  enableConversationExport: boolean;
+}
+
 export interface FeatureFlags {
   enableVoiceStreaming: boolean;
   enableOfflineMode: boolean;
@@ -30,6 +37,8 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enableWebSocket: boolean;
   enableCaching: boolean;
+  enableStreaming: boolean;
+  enableMessageSearch: boolean;
 }
 
 // Environment-specific configurations
@@ -46,6 +55,11 @@ const developmentConfig: AppConfig = {
     defaultTTL: 300,
     enablePersistent: true,
   },
+  chat: {
+    defaultPersonality: 'helpful',
+    maxMessageLength: 4000,
+    enableConversationExport: true,
+  },
   logLevel: 'debug',
   features: {
     enableVoiceStreaming: true,
@@ -54,6 +68,8 @@ const developmentConfig: AppConfig = {
     enableAnalytics: false,
     enableWebSocket: true,
     enableCaching: true,
+    enableStreaming: true,
+    enableMessageSearch: true,
   },
   timeout: 10000,
   retryAttempts: 3,
@@ -72,6 +88,11 @@ const stagingConfig: AppConfig = {
     defaultTTL: 600,
     enablePersistent: true,
   },
+  chat: {
+    defaultPersonality: 'helpful',
+    maxMessageLength: 4000,
+    enableConversationExport: true,
+  },
   logLevel: 'info',
   features: {
     enableVoiceStreaming: true,
@@ -80,6 +101,8 @@ const stagingConfig: AppConfig = {
     enableAnalytics: true,
     enableWebSocket: true,
     enableCaching: true,
+    enableStreaming: true,
+    enableMessageSearch: true,
   },
   timeout: 15000,
   retryAttempts: 3,
@@ -98,6 +121,11 @@ const productionConfig: AppConfig = {
     defaultTTL: 900,
     enablePersistent: true,
   },
+  chat: {
+    defaultPersonality: 'helpful',
+    maxMessageLength: 4000,
+    enableConversationExport: true,
+  },
   logLevel: 'error',
   features: {
     enableVoiceStreaming: true,
@@ -106,6 +134,8 @@ const productionConfig: AppConfig = {
     enableAnalytics: true,
     enableWebSocket: true,
     enableCaching: true,
+    enableStreaming: true,
+    enableMessageSearch: true,
   },
   timeout: 20000,
   retryAttempts: 2,

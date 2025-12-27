@@ -152,7 +152,7 @@ export class OfflineSupportFactory {
       } catch (error) {
         console.error('Periodic sync failed:', error);
       }
-    }, OfflineSupportFactory.config.syncInterval);
+    }, OfflineSupportFactory.config.syncInterval) as any;
   }
 }
 

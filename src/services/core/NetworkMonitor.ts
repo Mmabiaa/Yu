@@ -55,7 +55,7 @@ export class NetworkMonitorImpl implements NetworkMonitor {
       if (!previousStatus || this.hasStatusChanged(previousStatus, status)) {
         this.notifyListeners(status);
       }
-    }, 30000);
+    }, 30000) as any;
 
     // Initial check
     this.getStatus().then(status => {

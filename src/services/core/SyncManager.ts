@@ -13,7 +13,7 @@ export class SyncManagerImpl implements SyncManager {
   constructor(offlineQueue: OfflineQueue, networkMonitor: NetworkMonitor) {
     this.offlineQueue = offlineQueue;
     this.networkMonitor = networkMonitor;
-    
+
     // Auto-sync when network becomes available
     this.networkMonitor.onStatusChange((status) => {
       if (status.isConnected && status.isInternetReachable && !this.syncInProgress) {
@@ -31,7 +31,7 @@ export class SyncManagerImpl implements SyncManager {
 
     this.syncInProgress = true;
     await this.setSyncStatus('syncing');
-    
+
     const startTime = Date.now();
     let syncedCount = 0;
     let failedCount = 0;
@@ -48,18 +48,19 @@ export class SyncManagerImpl implements SyncManager {
       const queueSize = await this.offlineQueue.getSize();
       if (queueSize > 0) {
         console.log(`Syncing ${queueSize} queued requests...`);
-        
+
         try {
           await this.offlineQueue.processQueue();
-          
+
           // Check how many requests are left (failed ones)
           const remainingSize = await this.offlineQueue.getSize();
           syncedCount = queueSize - remainingSize;
           failedCount = remainingSize;
-          
+
           // Collect error information for failed requests
           if (failedCount > 0) {
-            const failedRequests = await this.offlineQueue.getFailedRequests();
+            const allRequests = await this.offlineQueue.getAll();
+            const failedRequests = allRequests.filter(req => req.retryCount >= req.maxRetries);
             for (const request of failedRequests) {
               errors.push({
                 requestId: request.id,
@@ -95,7 +96,7 @@ export class SyncManagerImpl implements SyncManager {
 
     } catch (error) {
       await this.setSyncStatus('error');
-      
+
       const result: SyncResult = {
         success: false,
         syncedCount,
@@ -116,7 +117,7 @@ export class SyncManagerImpl implements SyncManager {
 
     } finally {
       this.syncInProgress = false;
-      
+
       // Reset status to idle after a delay if no errors
       setTimeout(async () => {
         const status = await this.getSyncStatus();
@@ -134,7 +135,7 @@ export class SyncManagerImpl implements SyncManager {
 
     this.syncInProgress = true;
     await this.setSyncStatus('syncing');
-    
+
     const startTime = Date.now();
     let syncedCount = 0;
     let failedCount = 0;
@@ -149,9 +150,9 @@ export class SyncManagerImpl implements SyncManager {
 
       // Get all queued requests
       const allRequests = await this.offlineQueue.getAll();
-      
+
       // Filter requests by type (based on URL patterns)
-      const filteredRequests = allRequests.filter(request => 
+      const filteredRequests = allRequests.filter(request =>
         types.some(type => request.url.includes(type))
       );
 
@@ -190,7 +191,7 @@ export class SyncManagerImpl implements SyncManager {
 
     } catch (error) {
       await this.setSyncStatus('error');
-      
+
       const result: SyncResult = {
         success: false,
         syncedCount,
@@ -211,7 +212,7 @@ export class SyncManagerImpl implements SyncManager {
 
     } finally {
       this.syncInProgress = false;
-      
+
       setTimeout(async () => {
         const status = await this.getSyncStatus();
         if (status === 'completed') {
@@ -286,22 +287,29 @@ export class SyncManagerImpl implements SyncManager {
 
     const timeSinceLastSync = await this.getTimeSinceLastSync();
     const autoSyncThreshold = 5 * 60 * 1000; // 5 minutes
-    
+
     return timeSinceLastSync === null || timeSinceLastSync > autoSyncThreshold;
   }
 
   // Cleanup old sync data
   async cleanup(): Promise<void> {
     try {
-      // Clean up stale requests (older than 24 hours)
-      await this.offlineQueue.cleanupStaleRequests(24 * 60 * 60 * 1000);
-      
+      // Clean up stale requests (older than 24 hours) - simplified implementation
+      const allRequests = await this.offlineQueue.getAll();
+      const staleThreshold = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+
+      for (const request of allRequests) {
+        if (request.timestamp.getTime() < staleThreshold) {
+          await this.offlineQueue.remove(request.id);
+        }
+      }
+
       // Reset error status if it's been more than an hour
       const status = await this.getSyncStatus();
       if (status === 'error') {
         const lastSync = await this.getLastSyncTime();
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        
+
         if (!lastSync || lastSync < oneHourAgo) {
           await this.setSyncStatus('idle');
         }

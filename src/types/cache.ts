@@ -77,6 +77,7 @@ export interface MemoryCache {
   getEntryCount(): number;
   evictLRU(count?: number): void;
   cleanup(): void;
+  getAllEntries(): CacheEntry[];
 }
 
 export interface PersistentCache {
@@ -141,6 +142,7 @@ export interface SyncManager {
   getLastSyncTime(): Promise<Date | null>;
   setLastSyncTime(time: Date): Promise<void>;
   getSyncStatus(): Promise<SyncStatus>;
+  shouldAutoSync(): Promise<boolean>;
 }
 
 export interface SyncResult {

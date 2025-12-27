@@ -2,6 +2,8 @@
 export { ApiClient } from './core/ApiClient';
 export { TokenManager } from './core/TokenManager';
 export { createTokenManager, getTokenManager, resetTokenManager } from './core/TokenManagerFactory';
+export { WebSocketManager } from './core/WebSocketManager';
+export { BaseService } from './core/BaseService';
 
 // Cache services
 export { CacheManagerImpl as CacheManager } from './core/CacheManager';
@@ -22,8 +24,13 @@ export { AuthService } from './auth/AuthService';
 export { AuthServiceFactory } from './auth/AuthServiceFactory';
 export { AuthIntegration, getAuthIntegration, resetAuthIntegration } from './auth/AuthIntegration';
 
+// Chat services
+export { ChatService } from './chat/ChatService';
+export { ChatServiceFactory } from './chat/ChatServiceFactory';
+
 // Service management
 export { ServiceManager } from './ServiceManager';
 
 // Types
 export type { AuthServiceConfig } from './auth/AuthService';
+export type { ChatServiceConfig } from './chat/ChatService';

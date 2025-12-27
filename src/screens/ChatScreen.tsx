@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,88 +16,202 @@ import { speak } from '../utils/speech';
 import AudioVisualization from '../components/AudioVisualization';
 import { typography } from '../theme';
 import { useTheme } from '../context/ThemeContext';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'yu';
-  timestamp: Date;
-}
-
-const mockResponses: { [key: string]: string } = {
-  'hello': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'hi': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'hey': "Hey there! I'm Yu, your digital twin. How can I help you today?",
-  'help': "I'm here to help! You can ask me to control your devices, translate languages, analyze images, or just chat. What would you like to do?",
-  'control': "I can help you control your devices. What would you like me to do?",
-  'translate': "I can translate between many languages. Just tell me what you need!",
-  'vision': "I can analyze images and tell you what I see. Try using Yu-Vision!",
-  'default': "I understand. How else can I assist you today?",
-};
+import { ServiceManager } from '../services/ServiceManager';
+import { Message, Conversation, StreamResponse } from '../types/chat';
 
 export default function ChatScreen({ navigation }: any) {
   const { theme } = useTheme();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: "Hello! I'm Yu, your virtual clone assistant. How can I help you today?",
-      sender: 'yu',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [shouldSpeak, setShouldSpeak] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+  const serviceManager = ServiceManager.getInstance();
 
-  const getMockResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    for (const [key, response] of Object.entries(mockResponses)) {
-      if (lowerMessage.includes(key)) {
-        return response;
+  // Initialize conversation and load messages
+  useEffect(() => {
+    initializeChat();
+    return () => {
+      // Cleanup WebSocket connection on unmount
+      const chatService = serviceManager.getChatService();
+      if (chatService.isStreamConnected()) {
+        chatService.disconnectStream();
       }
+    };
+  }, []);
+
+  // Set up streaming if enabled
+  useEffect(() => {
+    const chatService = serviceManager.getChatService();
+    if (currentConversation && chatService.isStreamingEnabled()) {
+      setupStreaming();
     }
-    return mockResponses['default'];
+  }, [currentConversation]);
+
+  const initializeChat = async () => {
+    try {
+      setIsLoading(true);
+      const chatService = serviceManager.getChatService();
+
+      // Get recent conversations
+      const conversationList = await chatService.getConversations(1, 1);
+
+      if (conversationList.conversations.length > 0) {
+        // Use the most recent conversation
+        const conversation = conversationList.conversations[0];
+        setCurrentConversation(conversation);
+
+        // Load messages for this conversation
+        const messageList = await chatService.getConversationMessages(conversation.id, 1, 50);
+        setMessages(messageList.messages);
+      } else {
+        // Create a new conversation
+        const newConversation = await chatService.createConversation(
+          'New Chat',
+          'helpful',
+          "Hello! I'm Yu, your virtual clone assistant. How can I help you today?"
+        );
+        setCurrentConversation(newConversation);
+
+        // Add welcome message
+        const welcomeMessage: Message = {
+          id: 'welcome',
+          conversationId: newConversation.id,
+          role: 'assistant',
+          content: "Hello! I'm Yu, your virtual clone assistant. How can I help you today?",
+          timestamp: new Date(),
+        };
+        setMessages([welcomeMessage]);
+      }
+    } catch (error) {
+      console.error('Failed to initialize chat:', error);
+      Alert.alert('Error', 'Failed to load chat. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSend = () => {
-    if (!message.trim()) return;
+  const setupStreaming = async () => {
+    if (!currentConversation) return;
 
-    // Add user message
+    try {
+      const chatService = serviceManager.getChatService();
+
+      // Connect to streaming
+      await chatService.connectToStream(currentConversation.id);
+
+      // Set up stream response handler
+      chatService.onStreamResponse((response: StreamResponse) => {
+        handleStreamResponse(response);
+      });
+
+    } catch (error) {
+      console.error('Failed to setup streaming:', error);
+      // Continue without streaming
+    }
+  };
+
+  const handleStreamResponse = (response: StreamResponse) => {
+    switch (response.type) {
+      case 'message_start':
+        setIsStreaming(true);
+        setStreamingMessage('');
+        break;
+
+      case 'message_delta':
+        setStreamingMessage(prev => prev + (response.data.content || ''));
+        break;
+
+      case 'message_end':
+        setIsStreaming(false);
+        const completeMessage: Message = {
+          id: response.messageId || Date.now().toString(),
+          conversationId: response.conversationId,
+          role: 'assistant',
+          content: response.data.content,
+          timestamp: new Date(),
+          metadata: response.data.metadata
+        };
+        setMessages(prev => [...prev, completeMessage]);
+        setStreamingMessage('');
+
+        // Speak the response if it came from voice input
+        if (shouldSpeak) {
+          speak(response.data.content, {
+            language: 'en',
+            pitch: 1.0,
+            rate: 0.9,
+          });
+          setShouldSpeak(false);
+        }
+        break;
+
+      case 'error':
+        setIsStreaming(false);
+        setStreamingMessage('');
+        Alert.alert('Error', response.data.error || 'An error occurred while processing your message.');
+        break;
+    }
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || !currentConversation || isLoading) return;
+
+    const userMessageText = message.trim();
+    const currentShouldSpeak = shouldSpeak;
+
+    // Add user message to UI immediately
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: message.trim(),
-      sender: 'user',
+      conversationId: currentConversation.id,
+      role: 'user',
+      content: userMessageText,
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    const currentShouldSpeak = shouldSpeak;
     setMessage('');
     setShouldSpeak(false);
+    setIsLoading(true);
 
-    // Simulate response delay
-    setTimeout(() => {
-      const responseText = getMockResponse(userMessage.text);
-      const yuMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: responseText,
-        sender: 'yu',
-        timestamp: new Date(),
-      };
+    try {
+      const chatService = serviceManager.getChatService();
 
-      setMessages(prev => [...prev, yuMessage]);
-      
-      // Only speak if message came from voice recording
-      if (currentShouldSpeak) {
-        speak(responseText, {
-          language: 'en',
-          pitch: 1.0,
-          rate: 0.9,
-        });
+      // Check if streaming is available and connected
+      if (chatService.isStreamingEnabled() && chatService.isStreamConnected()) {
+        // Use streaming
+        chatService.sendStreamMessage(userMessageText, 'helpful');
+      } else {
+        // Use regular API call
+        const response = await chatService.sendMessage(
+          userMessageText,
+          currentConversation.id,
+          'helpful'
+        );
+
+        // Add AI response to messages
+        setMessages(prev => [...prev, response.message]);
+
+        // Speak the response if it came from voice input
+        if (currentShouldSpeak) {
+          speak(response.message.content, {
+            language: 'en',
+            pitch: 1.0,
+            rate: 0.9,
+          });
+        }
       }
-    }, 500);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRecord = () => {
@@ -104,7 +219,7 @@ export default function ChatScreen({ navigation }: any) {
       // Stop recording and process speech-to-text
       setIsRecording(false);
       setIsListening(true);
-      
+
       // Mock: simulate speech-to-text result
       setTimeout(() => {
         setIsListening(false);
@@ -115,7 +230,7 @@ export default function ChatScreen({ navigation }: any) {
     } else {
       // Start recording
       setIsRecording(true);
-      
+
       // Auto-stop after 3 seconds for demo purposes
       setTimeout(() => {
         if (isRecording) {
@@ -140,7 +255,7 @@ export default function ChatScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.headerCenter}
           onPress={() => navigation.navigate('Profile')}
           activeOpacity={0.7}
@@ -163,20 +278,20 @@ export default function ChatScreen({ navigation }: any) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
         >
           {messages.map((msg) => (
-            <View 
-              key={msg.id} 
+            <View
+              key={msg.id}
               style={[
                 styles.messageContainer,
-                msg.sender === 'user' && styles.userMessageContainer
+                msg.role === 'user' && styles.userMessageContainer
               ]}
             >
-              {msg.sender === 'yu' && (
+              {msg.role === 'assistant' && (
                 <View style={styles.messageHeader}>
                   <Ionicons name="star" size={16} color={theme.purple} />
                   <Text style={styles.messageSender}>Yu</Text>
@@ -185,20 +300,36 @@ export default function ChatScreen({ navigation }: any) {
               <View
                 style={[
                   styles.messageBubble,
-                  msg.sender === 'user' && styles.userMessageBubble,
+                  msg.role === 'user' && styles.userMessageBubble,
                 ]}
               >
-                <Text 
+                <Text
                   style={[
                     styles.messageText,
-                    msg.sender === 'user' && styles.userMessageText
+                    msg.role === 'user' && styles.userMessageText
                   ]}
                 >
-                  {msg.text}
+                  {msg.content}
                 </Text>
               </View>
             </View>
           ))}
+
+          {/* Show streaming message */}
+          {isStreaming && streamingMessage && (
+            <View style={styles.messageContainer}>
+              <View style={styles.messageHeader}>
+                <Ionicons name="star" size={16} color={theme.purple} />
+                <Text style={styles.messageSender}>Yu</Text>
+              </View>
+              <View style={styles.messageBubble}>
+                <Text style={styles.messageText}>
+                  {streamingMessage}
+                  <Text style={styles.cursor}>|</Text>
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {isListening && (
@@ -216,14 +347,14 @@ export default function ChatScreen({ navigation }: any) {
         )}
 
         <View style={styles.inputContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.inputIcon, isRecording && styles.inputIconRecording]}
             onPress={handleRecord}
           >
-            <Ionicons 
-              name={isRecording ? "mic" : "mic-outline"} 
-              size={24} 
-              color={isRecording ? theme.purple : theme.text} 
+            <Ionicons
+              name={isRecording ? "mic" : "mic-outline"}
+              size={24}
+              color={isRecording ? theme.purple : theme.text}
             />
           </TouchableOpacity>
           <TextInput
@@ -236,16 +367,24 @@ export default function ChatScreen({ navigation }: any) {
             multiline
             editable={!isRecording}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.sendButton}
             onPress={handleSend}
-            disabled={!message.trim() || isRecording}
+            disabled={!message.trim() || isRecording || isLoading}
           >
-            <Ionicons 
-              name="send" 
-              size={20} 
-              color={message.trim() && !isRecording ? theme.text : theme.textSecondary} 
-            />
+            {isLoading ? (
+              <Ionicons
+                name="hourglass-outline"
+                size={20}
+                color={theme.textSecondary}
+              />
+            ) : (
+              <Ionicons
+                name="send"
+                size={20}
+                color={message.trim() && !isRecording && !isLoading ? theme.text : theme.textSecondary}
+              />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -348,6 +487,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   userMessageText: {
     color: '#FFFFFF',
+  },
+  cursor: {
+    opacity: 0.7,
+    fontWeight: 'bold',
   },
   inputContainer: {
     flexDirection: 'row',

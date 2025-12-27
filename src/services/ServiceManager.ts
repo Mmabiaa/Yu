@@ -3,6 +3,10 @@ import { TokenManager } from './core/TokenManager';
 import { getTokenManager } from './core/TokenManagerFactory';
 import { AuthService } from './auth/AuthService';
 import { AuthServiceFactory } from './auth/AuthServiceFactory';
+import { ChatService } from './chat/ChatService';
+import { ChatServiceFactory } from './chat/ChatServiceFactory';
+import { CacheManagerFactory } from './core/CacheManagerFactory';
+import { CacheManager } from '../types/cache';
 import { getCurrentConfig } from '../config/environment';
 import { ApiClientConfig, ApiError } from '../types/api';
 
@@ -11,7 +15,9 @@ export class ServiceManager {
   
   private apiClient: ApiClient;
   private tokenManager: TokenManager;
+  private cacheManager: CacheManager;
   private authService: AuthService;
+  private chatService: ChatService;
   private authErrorCallback?: (error: ApiError) => void;
 
   private constructor() {
@@ -31,6 +37,9 @@ export class ServiceManager {
     // Initialize token manager
     this.tokenManager = getTokenManager();
     
+    // Initialize cache manager
+    this.cacheManager = CacheManagerFactory.getInstance();
+    
     // Set up circular dependencies
     this.apiClient.setTokenManager(this.tokenManager);
     this.tokenManager.setApiClient(this.apiClient);
@@ -42,6 +51,9 @@ export class ServiceManager {
     
     // Initialize auth service
     this.authService = AuthServiceFactory.getInstance(this.apiClient, this.tokenManager);
+    
+    // Initialize chat service
+    this.chatService = ChatServiceFactory.getInstance(this.apiClient, this.cacheManager);
   }
 
   /**
@@ -60,6 +72,7 @@ export class ServiceManager {
   public static reset(): void {
     ServiceManager.instance = null;
     AuthServiceFactory.reset();
+    ChatServiceFactory.reset();
   }
 
   /**
@@ -81,6 +94,20 @@ export class ServiceManager {
    */
   public getAuthService(): AuthService {
     return this.authService;
+  }
+
+  /**
+   * Get chat service instance
+   */
+  public getChatService(): ChatService {
+    return this.chatService;
+  }
+
+  /**
+   * Get cache manager instance
+   */
+  public getCacheManager(): CacheManager {
+    return this.cacheManager;
   }
 
   /**

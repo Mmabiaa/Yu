@@ -255,7 +255,7 @@ export class CacheManagerImpl implements CacheManager {
         this.cleanup().catch(error => {
           console.error('Cache cleanup error:', error);
         });
-      }, this.config.cleanupInterval * 1000);
+      }, this.config.cleanupInterval * 1000) as any;
     }
   }
 }
