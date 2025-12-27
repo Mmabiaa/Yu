@@ -13,13 +13,6 @@ config.resolver = {
   unstable_enablePackageExports: false,
 };
 
-// Polyfill for toReversed method (Node.js 18 compatibility)
-if (!Array.prototype.toReversed) {
-  Array.prototype.toReversed = function() {
-    return [...this].reverse();
-  };
-}
-
 // Ensure cache directory exists (Windows workaround)
 const cacheDir = path.join(__dirname, '.expo', 'metro', 'externals');
 if (!fs.existsSync(cacheDir)) {
